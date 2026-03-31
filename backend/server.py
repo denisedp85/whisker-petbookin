@@ -970,13 +970,19 @@ async def stripe_webhook(request: Request):
         user_id = metadata.get("user_id")
         plan_id = metadata.get("plan_id")
         tier = metadata.get("tier", "free")
+        
+        logger.info(f"Checkout completed - user_id: {user_id}, tier: {tier}, plan: {plan_id}")
+        
         if user_id and tier and tier != "none":
-            await db.users.update_one({"user_id": user_id}, {"$set": {
+            result = await db.users.update_one({"user_id": user_id}, {"$set": {
                 "membership_tier": tier,
                 "membership_status": "active",
                 "membership_plan": plan_id,
                 "membership_started": datetime.now(timezone.utc).isoformat()
             }})
+            logger.info(f"Updated user {user_id} to tier {tier}, matched: {result.matched_count}, modified: {result.modified_count}")
+        else:
+            logger.warning(f"Skipping tier update - user_id: {user_id}, tier: {tier}")
         # Update transaction
         await db.transactions.update_one(
             {"stripe_session_id": session.id},
