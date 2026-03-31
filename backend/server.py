@@ -763,6 +763,32 @@ async def update_pet_photo(pet_id: str, file: UploadFile = File(...), user=Depen
 @api_router.post("/ai/generate-bio")
 @limiter.limit("5/minute")
 async def generate_bio(request: Request, data: AIBioRequest, user=Depends(get_current_user)):
+    # Check AI generation limits based on membership tier
+    tier = user.get("membership_tier", "free")
+    ai_generations_used = user.get("ai_generations_used", 0)
+    
+    # Tier limits: free=0, prime=5, pro=15, ultra=30, mega=unlimited
+    tier_limits = {
+        "free": 0,
+        "prime": 5,
+        "pro": 15,
+        "ultra": 30,
+        "mega": 999999  # Unlimited
+    }
+    
+    limit = tier_limits.get(tier, 0)
+    
+    # Check if user exceeded limit
+    if ai_generations_used >= limit:
+        return {
+            "error": "AI generation limit reached",
+            "message": f"You've used {ai_generations_used}/{limit} AI generations. Upgrade your membership or purchase more generations.",
+            "used": ai_generations_used,
+            "limit": limit,
+            "tier": tier,
+            "upgrade_required": True
+        }
+    
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         chat = LlmChat(
@@ -774,10 +800,59 @@ async def generate_bio(request: Request, data: AIBioRequest, user=Depends(get_cu
         activities = ", ".join(data.favorite_activities) if data.favorite_activities else "playing"
         msg = UserMessage(text=f"Write a fun social media bio for {data.pet_name}, a {data.breed} {data.species}. Personality traits: {traits}. Favorite activities: {activities}.")
         response = await chat.send_message(msg)
-        return {"bio": response}
+        
+        # Increment AI generations used
+        await db.users.update_one(
+            {"user_id": user["user_id"]},
+            {"$inc": {"ai_generations_used": 1}}
+        )
+        
+        return {
+            "bio": response,
+            "used": ai_generations_used + 1,
+            "limit": limit,
+            "tier": tier,
+            "remaining": limit - (ai_generations_used + 1) if tier != "mega" else "unlimited"
+        }
     except Exception as e:
         logger.error(f"AI bio generation failed: {e}")
         return {"bio": f"Hi, I'm {data.pet_name}! I'm a lovable {data.breed} {data.species} who enjoys life to the fullest!"}
+
+@api_router.post("/ai/purchase-generations")
+async def purchase_ai_generations(user=Depends(get_current_user)):
+    """Purchase 10 additional AI generations for $2.99"""
+    # This would integrate with Stripe for payment
+    # For now, return purchase details
+    return {
+        "product": "AI Generation Pack",
+        "quantity": 10,
+        "price": 2.99,
+        "description": "10 additional AI-generated bios for your pets"
+    }
+
+@api_router.get("/ai/usage")
+async def get_ai_usage(user=Depends(get_current_user)):
+    """Get current AI generation usage stats"""
+    tier = user.get("membership_tier", "free")
+    ai_generations_used = user.get("ai_generations_used", 0)
+    
+    tier_limits = {
+        "free": 0,
+        "prime": 5,
+        "pro": 15,
+        "ultra": 30,
+        "mega": 999999
+    }
+    
+    limit = tier_limits.get(tier, 0)
+    
+    return {
+        "tier": tier,
+        "used": ai_generations_used,
+        "limit": limit if tier != "mega" else "unlimited",
+        "remaining": limit - ai_generations_used if tier != "mega" else "unlimited",
+        "can_purchase_more": True
+    }
 
 # ===== STRIPE MEMBERSHIP ROUTES =====
 
