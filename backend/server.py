@@ -31,6 +31,7 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 APP_NAME = os.environ.get('APP_NAME', 'petbookin')
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
 # Membership Plans (defined server-side for security)
 MEMBERSHIP_PLANS = {
@@ -933,13 +934,30 @@ async def create_checkout(request: Request, user=Depends(get_current_user)):
 async def stripe_webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
-    try:
-        event = stripe.Event.construct_from(
-            stripe.util.convert_to_dict(stripe.util.json.loads(payload)), stripe.api_key
-        )
-    except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        raise HTTPException(status_code=400, detail="Webhook error")
+    
+    # Verify webhook signature for security
+    if STRIPE_WEBHOOK_SECRET:
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEBHOOK_SECRET
+            )
+        except ValueError as e:
+            logger.error(f"Invalid payload: {e}")
+            raise HTTPException(status_code=400, detail="Invalid payload")
+        except stripe.error.SignatureVerificationError as e:
+            logger.error(f"Invalid signature: {e}")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+    else:
+        # Fallback if no webhook secret (for testing)
+        try:
+            event = stripe.Event.construct_from(
+                stripe.util.convert_to_dict(stripe.util.json.loads(payload)), stripe.api_key
+            )
+        except Exception as e:
+            logger.error(f"Webhook error: {e}")
+            raise HTTPException(status_code=400, detail="Webhook error")
+    
+    # Handle events
     if event.type == "checkout.session.completed":
         session = event.data.object
         metadata = session.get("metadata", {})
@@ -967,6 +985,7 @@ async def stripe_webhook(request: Request):
                 "status": "completed",
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
+        logger.info(f"Checkout completed for user {user_id}, tier: {tier}")
     elif event.type == "customer.subscription.deleted":
         subscription = event.data.object
         customer_id = subscription.get("customer")
@@ -976,6 +995,19 @@ async def stripe_webhook(request: Request):
                 "membership_tier": "free",
                 "membership_status": "cancelled"
             }})
+            logger.info(f"Subscription cancelled for user {user['user_id']}")
+    elif event.type == "customer.subscription.updated":
+        subscription = event.data.object
+        customer_id = subscription.get("customer")
+        status = subscription.get("status")
+        user = await db.users.find_one({"stripe_customer_id": customer_id}, {"_id": 0})
+        if user:
+            membership_status = "active" if status == "active" else "cancelled"
+            await db.users.update_one({"user_id": user["user_id"]}, {"$set": {
+                "membership_status": membership_status
+            }})
+            logger.info(f"Subscription updated for user {user['user_id']}, status: {membership_status}")
+    
     return {"status": "ok"}
 
 @api_router.get("/membership/status")
