@@ -85,6 +85,43 @@ export default function SettingsPage() {
                 </div>
                 <div className="border-t border-gray-100 pt-4">
                   <h4 className="text-sm font-medium text-[#1c1e21] mb-3 flex items-center gap-1.5">
+                    <Shield className="w-4 h-4 text-amber-500" /> Petbookin Breeder Registry
+                  </h4>
+                  {user?.petbookin_breeder_id ? (
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Your Breeder ID:</span>
+                        <Badge className="bg-amber-500 text-white font-mono text-xs px-3 py-1">
+                          {user.petbookin_breeder_id}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Use this ID to register for events, tournaments, and receive official certificates.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 mb-3">
+                        Don't have a kennel club membership? Get your official Petbookin Breeder ID to participate in events and tournaments!
+                      </p>
+                      <Button
+                        onClick={async () => {
+                          try {
+                            // Request breeder ID - will be auto-assigned when creating breeder pet
+                            toast.info('Create a breeder pet profile to get your Petbookin Breeder ID!');
+                          } catch (e) {
+                            toast.error('Failed to request ID');
+                          }
+                        }}
+                        className="bg-amber-500 hover:bg-amber-600 text-white text-sm"
+                      >
+                        Learn More
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-gray-100 pt-4">
+                  <h4 className="text-sm font-medium text-[#1c1e21] mb-3 flex items-center gap-1.5">
                     <Shield className="w-4 h-4 text-[#4080ff]" /> Kennel Club Verification
                   </h4>
                   <div className="grid sm:grid-cols-2 gap-4">
