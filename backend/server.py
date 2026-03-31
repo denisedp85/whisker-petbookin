@@ -35,11 +35,11 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
 # Membership Plans (defined server-side for security)
 MEMBERSHIP_PLANS = {
-    "prime_weekly": {"name": "PRIME Weekly", "amount": 4.99, "tier": "PRIME", "period": "week"},
-    "pro_monthly": {"name": "PRO Monthly", "amount": 14.99, "tier": "PRO", "period": "month"},
-    "ultra_monthly": {"name": "ULTRA Monthly", "amount": 24.99, "tier": "ULTRA", "period": "month"},
-    "mega_monthly": {"name": "MEGA Monthly", "amount": 39.99, "tier": "MEGA", "period": "month"},
-    "pro_yearly": {"name": "PRO Yearly", "amount": 305.88, "tier": "PRO", "period": "year"},
+    "prime_weekly": {"name": "PRIME Weekly", "amount": 4.99, "tier": "prime", "period": "week"},
+    "pro_monthly": {"name": "PRO Monthly", "amount": 14.99, "tier": "pro", "period": "month"},
+    "ultra_monthly": {"name": "ULTRA Monthly", "amount": 24.99, "tier": "ultra", "period": "month"},
+    "mega_monthly": {"name": "MEGA Monthly", "amount": 39.99, "tier": "mega", "period": "month"},
+    "pro_yearly": {"name": "PRO Yearly", "amount": 305.88, "tier": "pro", "period": "year"},
     "promote_listing": {"name": "Promoted Listing (1 week)", "amount": 3.49, "tier": "none", "period": "week"},
     "donation_5": {"name": "Donation $5", "amount": 5.00, "tier": "none", "period": "once"},
     "donation_10": {"name": "Donation $10", "amount": 10.00, "tier": "none", "period": "once"},
@@ -905,7 +905,7 @@ async def create_checkout(request: Request, user=Depends(get_current_user)):
             "metadata": {"user_id": user["user_id"], "plan_id": plan_id, "tier": plan["tier"]},
         }
         # Add 7-day free trial for subscription plans
-        if plan["tier"] in ("PRIME", "PRO", "ULTRA", "MEGA"):
+        if plan["tier"] in ("prime", "pro", "ultra", "mega"):
             session_params["subscription_data"] = {"trial_period_days": 7}
     else:
         session_params = {
@@ -916,6 +916,12 @@ async def create_checkout(request: Request, user=Depends(get_current_user)):
             "cancel_url": body.get("cancel_url", "https://petbookin.com/membership?payment=cancelled"),
             "metadata": {"user_id": user["user_id"], "plan_id": plan_id, "tier": plan.get("tier", "none")},
         }
+    
+    # Add payment method types (Google Pay, Apple Pay auto-enabled when available)
+    session_params["payment_method_types"] = ["card", "cashapp", "link"]
+    # Note: Google Pay, Apple Pay, Samsung Pay auto-appear when user's device/browser supports them
+    # PayPal requires separate setup in Stripe Dashboard
+    
     session = stripe.checkout.Session.create(**session_params)
     # Log transaction
     await db.transactions.insert_one({
