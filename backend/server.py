@@ -1232,6 +1232,72 @@ async def admin_assign_breeder_id(user_id: str, admin=Depends(require_admin)):
         "user_name": user["name"]
     }
 
+@api_router.post("/admin/set-mega-tier/{user_id}")
+async def admin_set_mega_tier(user_id: str, admin=Depends(require_admin)):
+    """Admin endpoint to set a user to MEGA tier (for owner/testing)"""
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "membership_tier": "mega",
+                "membership_status": "active",
+                "ai_generations_used": 0
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password": 0})
+    
+    logger.info(f"Admin set user {user_id} to MEGA tier")
+    
+    return {
+        "message": "User upgraded to MEGA tier successfully",
+        "user_email": user["email"],
+        "user_name": user["name"],
+        "membership_tier": "mega",
+        "membership_status": "active",
+        "ai_generations": "unlimited"
+    }
+
+@api_router.post("/user/claim-mega-tier")
+async def claim_mega_tier(user=Depends(get_current_user)):
+    """Allow owner/admin to claim MEGA tier without payment"""
+    # Only admins can claim free MEGA tier
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can claim free MEGA tier")
+    
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {
+            "$set": {
+                "membership_tier": "mega",
+                "membership_status": "active",
+                "ai_generations_used": 0
+            }
+        }
+    )
+    
+    logger.info(f"Admin {user['email']} claimed MEGA tier")
+    
+    return {
+        "message": "MEGA tier activated successfully!",
+        "membership_tier": "mega",
+        "membership_status": "active",
+        "ai_generations": "unlimited",
+        "features": [
+            "Unlimited AI-generated bios",
+            "Unlimited listings",
+            "Priority support",
+            "All premium features",
+            "Breeder registry access",
+            "Event creation",
+            "Certificate generation"
+        ]
+    }
+
 @api_router.post("/admin/setup")
 async def admin_setup(request: Request):
     """One-time setup: promote a user to admin using the admin secret."""
