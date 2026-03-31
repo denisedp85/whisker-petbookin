@@ -52,8 +52,9 @@ async def seed_admin():
             import uuid
             from datetime import datetime, timezone
             
+            user_id = f"user_{uuid.uuid4().hex[:12]}"
             admin_user = {
-                "id": str(uuid.uuid4()),
+                "user_id": user_id,
                 "email": ADMIN_EMAIL,
                 "password": hashed_password,
                 "name": ADMIN_NAME,
@@ -66,7 +67,23 @@ async def seed_admin():
                 "location": "",
                 "bio": "System Administrator",
                 "profile_picture": "",
-                "cover_photo": ""
+                "cover_photo": "",
+                "account_type": "pet_owner",
+                "backup_phone": "",
+                "backup_email": "",
+                "owner_bio": "Platform Administrator",
+                "owner_hobbies": "",
+                "owner_interests": "",
+                "website": "",
+                "kennel_club": "",
+                "kennel_registration": "",
+                "petbookin_breeder_id": "",
+                "membership_tier": "mega",
+                "membership_status": "active",
+                "stripe_customer_id": "",
+                "auth_type": "jwt",
+                "is_banned": False,
+                "ban_reason": ""
             }
             
             await db.users.insert_one(admin_user)
