@@ -151,6 +151,28 @@ class AIBioRequest(BaseModel):
     personality_traits: List[str] = []
     favorite_activities: List[str] = []
 
+# Breeder Registry Models
+class BreederEventCreate(BaseModel):
+    title: str
+    description: str
+    event_type: str  # tournament, show, competition, workshop
+    date: str
+    location: str
+    species_allowed: List[str] = []
+    entry_fee: float = 0.0
+    prizes: str = ""
+
+class BreederEventRegistration(BaseModel):
+    event_id: str
+    pet_id: str
+
+class BreederAward(BaseModel):
+    event_id: str
+    pet_id: str
+    award_title: str
+    award_type: str  # gold, silver, bronze, participant, winner
+    points: int = 0
+
 # ===== AUTH HELPERS =====
 
 def create_jwt_token(user_id: str) -> str:
@@ -226,7 +248,7 @@ async def register(request: Request, data: UserCreate):
     # Generate Petbookin breeder credentials for unregistered breeders
     petbookin_breeder_id = ""
     if data.account_type == "breeder" and not data.kennel_club:
-        petbookin_breeder_id = f"PBK-{uuid.uuid4().hex[:8].upper()}"
+        petbookin_breeder_id = f"PBK-BR-{uuid.uuid4().hex[:8].upper()}"
     user_doc = {
         "user_id": user_id,
         "email": data.email,
@@ -383,6 +405,16 @@ async def update_profile(request: Request, user=Depends(get_current_user)):
 @api_router.post("/pets")
 async def create_pet(data: PetCreate, user=Depends(get_current_user)):
     pet_id = f"pet_{uuid.uuid4().hex[:12]}"
+    
+    # If creating a breeder profile and owner doesn't have Petbookin Breeder ID, assign one
+    if data.is_breeder_profile and not user.get("petbookin_breeder_id"):
+        petbookin_breeder_id = f"PBK-BR-{uuid.uuid4().hex[:8].upper()}"
+        await db.users.update_one(
+            {"user_id": user["user_id"]},
+            {"$set": {"petbookin_breeder_id": petbookin_breeder_id}}
+        )
+        logger.info(f"Assigned Petbookin Breeder ID {petbookin_breeder_id} to user {user['user_id']}")
+    
     pet_doc = {
         "pet_id": pet_id,
         "owner_id": user["user_id"],
@@ -938,6 +970,155 @@ async def require_admin(request: Request, authorization: str = Header(None)):
     if not user.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+# ===== BREEDER REGISTRY & EVENTS =====
+
+@api_router.post("/breeder/events")
+async def create_breeder_event(data: BreederEventCreate, admin=Depends(require_admin)):
+    """Admin creates breeder events/tournaments"""
+    event_id = f"event_{uuid.uuid4().hex[:12]}"
+    event_doc = {
+        "event_id": event_id,
+        **data.model_dump(),
+        "registrations": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": admin["user_id"]
+    }
+    await db.breeder_events.insert_one(event_doc)
+    event_doc.pop("_id", None)
+    return event_doc
+
+@api_router.get("/breeder/events")
+async def list_breeder_events(upcoming: bool = True):
+    """List all breeder events/tournaments"""
+    query = {}
+    if upcoming:
+        now = datetime.now(timezone.utc).isoformat()
+        query["date"] = {"$gte": now[:10]}  # Compare dates only
+    events = await db.breeder_events.find(query, {"_id": 0}).sort("date", 1).to_list(50)
+    return events
+
+@api_router.post("/breeder/events/register")
+async def register_for_event(data: BreederEventRegistration, user=Depends(get_current_user)):
+    """Breeder registers their pet for an event"""
+    # Check if user has Petbookin Breeder ID
+    if not user.get("petbookin_breeder_id"):
+        raise HTTPException(status_code=403, detail="Petbookin Breeder ID required. Please create a breeder profile.")
+    
+    # Check if pet belongs to user
+    pet = await db.pets.find_one({"pet_id": data.pet_id, "owner_id": user["user_id"]}, {"_id": 0})
+    if not pet:
+        raise HTTPException(status_code=403, detail="Not your pet")
+    
+    # Check if event exists
+    event = await db.breeder_events.find_one({"event_id": data.event_id}, {"_id": 0})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    # Create registration
+    registration_id = f"reg_{uuid.uuid4().hex[:12]}"
+    registration_doc = {
+        "registration_id": registration_id,
+        "event_id": data.event_id,
+        "pet_id": data.pet_id,
+        "user_id": user["user_id"],
+        "petbookin_breeder_id": user["petbookin_breeder_id"],
+        "registered_at": datetime.now(timezone.utc).isoformat(),
+        "status": "registered"
+    }
+    await db.event_registrations.insert_one(registration_doc)
+    registration_doc.pop("_id", None)
+    return registration_doc
+
+@api_router.get("/breeder/events/{event_id}/registrations")
+async def get_event_registrations(event_id: str):
+    """Get all registrations for an event"""
+    registrations = await db.event_registrations.find({"event_id": event_id}, {"_id": 0}).to_list(100)
+    for reg in registrations:
+        pet = await db.pets.find_one({"pet_id": reg["pet_id"]}, {"_id": 0})
+        owner = await db.users.find_one({"user_id": reg["user_id"]}, {"_id": 0, "password": 0})
+        reg["pet"] = pet
+        reg["owner"] = owner
+    return registrations
+
+@api_router.post("/breeder/awards")
+async def create_award(data: BreederAward, admin=Depends(require_admin)):
+    """Admin creates awards for event participants"""
+    award_id = f"award_{uuid.uuid4().hex[:12]}"
+    
+    # Get pet and owner info
+    pet = await db.pets.find_one({"pet_id": data.pet_id}, {"_id": 0})
+    if not pet:
+        raise HTTPException(status_code=404, detail="Pet not found")
+    
+    owner = await db.users.find_one({"user_id": pet["owner_id"]}, {"_id": 0})
+    
+    award_doc = {
+        "award_id": award_id,
+        **data.model_dump(),
+        "pet_name": pet["name"],
+        "pet_breed": pet["breed"],
+        "owner_name": owner["name"],
+        "petbookin_breeder_id": owner.get("petbookin_breeder_id", ""),
+        "issued_at": datetime.now(timezone.utc).isoformat(),
+        "issued_by": admin["user_id"]
+    }
+    await db.breeder_awards.insert_one(award_doc)
+    
+    # Update owner's points
+    points_earned = data.points
+    await db.users.update_one(
+        {"user_id": pet["owner_id"]},
+        {"$inc": {"breeder_points": points_earned}}
+    )
+    
+    award_doc.pop("_id", None)
+    return award_doc
+
+@api_router.get("/breeder/awards/my")
+async def get_my_awards(user=Depends(get_current_user)):
+    """Get all awards for the current user's pets"""
+    my_pets = await db.pets.find({"owner_id": user["user_id"]}, {"_id": 0}).to_list(100)
+    pet_ids = [p["pet_id"] for p in my_pets]
+    awards = await db.breeder_awards.find({"pet_id": {"$in": pet_ids}}, {"_id": 0}).sort("issued_at", -1).to_list(100)
+    return awards
+
+@api_router.get("/breeder/certificate/{award_id}")
+async def get_certificate(award_id: str):
+    """Generate certificate for an award"""
+    award = await db.breeder_awards.find_one({"award_id": award_id}, {"_id": 0})
+    if not award:
+        raise HTTPException(status_code=404, detail="Award not found")
+    
+    event = await db.breeder_events.find_one({"event_id": award["event_id"]}, {"_id": 0})
+    
+    certificate = {
+        "award_id": award_id,
+        "certificate_number": f"CERT-{award_id.upper()}",
+        "title": "OFFICIAL PETBOOKIN CERTIFICATE",
+        "awarded_to": award["owner_name"],
+        "petbookin_breeder_id": award["petbookin_breeder_id"],
+        "pet_name": award["pet_name"],
+        "pet_breed": award["pet_breed"],
+        "award_title": award["award_title"],
+        "award_type": award["award_type"],
+        "event_title": event["title"] if event else "Petbookin Event",
+        "event_date": event["date"] if event else "",
+        "issued_date": award["issued_at"],
+        "points_earned": award["points"],
+        "signature": "Petbookin Registry Authority",
+        "seal": "Official Petbookin Breeder Registry Seal"
+    }
+    return certificate
+
+@api_router.get("/breeder/leaderboard")
+async def breeder_leaderboard(limit: int = 50):
+    """Get top breeders by points"""
+    breeders = await db.users.find(
+        {"petbookin_breeder_id": {"$ne": ""}},
+        {"_id": 0, "password": 0}
+    ).sort("breeder_points", -1).to_list(limit)
+    return breeders
 
 # ===== ADMIN ROUTES =====
 

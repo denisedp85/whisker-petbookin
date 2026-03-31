@@ -83,7 +83,8 @@ async def seed_admin():
                 "stripe_customer_id": "",
                 "auth_type": "jwt",
                 "is_banned": False,
-                "ban_reason": ""
+                "ban_reason": "",
+                "breeder_points": 0
             }
             
             await db.users.insert_one(admin_user)
