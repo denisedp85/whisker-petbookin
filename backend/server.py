@@ -1197,6 +1197,41 @@ async def breeder_leaderboard(limit: int = 50):
 
 # ===== ADMIN ROUTES =====
 
+@api_router.post("/admin/assign-breeder-id/{user_id}")
+async def admin_assign_breeder_id(user_id: str, admin=Depends(require_admin)):
+    """Admin endpoint to manually assign Petbookin Breeder ID to a user"""
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("petbookin_breeder_id"):
+        return {
+            "message": "User already has Petbookin Breeder ID",
+            "petbookin_breeder_id": user["petbookin_breeder_id"]
+        }
+    
+    # Generate and assign breeder ID
+    breeder_id = f"PBK-BR-{uuid.uuid4().hex[:8].upper()}"
+    await db.users.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "petbookin_breeder_id": breeder_id,
+                "ai_generations_used": 0,
+                "breeder_points": 0
+            }
+        }
+    )
+    
+    logger.info(f"Admin assigned Petbookin Breeder ID {breeder_id} to user {user_id}")
+    
+    return {
+        "message": "Petbookin Breeder ID assigned successfully",
+        "petbookin_breeder_id": breeder_id,
+        "user_email": user["email"],
+        "user_name": user["name"]
+    }
+
 @api_router.post("/admin/setup")
 async def admin_setup(request: Request):
     """One-time setup: promote a user to admin using the admin secret."""
