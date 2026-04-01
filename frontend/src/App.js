@@ -13,6 +13,7 @@ import BreederDirectoryPage from './pages/BreederDirectoryPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import MembershipPage from './pages/MembershipPage';
+import CertificatesPage from './pages/CertificatesPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -71,6 +72,7 @@ function AppRouter() {
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
       <Route path="/membership" element={<ProtectedRoute><MembershipPage /></ProtectedRoute>} />
+      <Route path="/certificates" element={<ProtectedRoute><CertificatesPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

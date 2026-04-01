@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
+from datetime import timedelta
 from datetime import datetime, timezone
 from models.schemas import PostCreate, CommentCreate
 from utils.auth import get_current_user, generate_post_id, generate_comment_id
@@ -132,3 +133,43 @@ async def delete_post(post_id: str, request: Request):
     await db.posts.delete_one({"post_id": post_id})
     await db.comments.delete_many({"post_id": post_id})
     return {"message": "Post deleted"}
+
+
+@router.get("/pet-of-the-week")
+async def pet_of_the_week(request: Request):
+    db = get_db(request)
+    one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+
+    # Find posts from the last week, sorted by likes count
+    top_posts = await db.posts.find(
+        {"created_at": {"$gte": one_week_ago}, "pet_id": {"$ne": None}},
+        {"_id": 0}
+    ).sort("likes_count", -1).limit(1).to_list(1)
+
+    if not top_posts:
+        # Fallback: most liked pet post of all time
+        top_posts = await db.posts.find(
+            {"pet_id": {"$ne": None}},
+            {"_id": 0}
+        ).sort("likes_count", -1).limit(1).to_list(1)
+
+    if not top_posts:
+        return {"pet": None, "post": None}
+
+    post = top_posts[0]
+    pet = await db.pets.find_one({"pet_id": post["pet_id"]}, {"_id": 0})
+    if not pet:
+        return {"pet": None, "post": None}
+
+    owner = await db.users.find_one({"user_id": pet["owner_id"]}, {"_id": 0, "password_hash": 0})
+
+    return {
+        "pet": pet,
+        "post": post,
+        "owner": {
+            "name": owner["name"] if owner else "Unknown",
+            "user_id": owner["user_id"] if owner else "",
+            "membership_tier": owner.get("membership_tier", "free") if owner else "free",
+            "breeder_info": owner.get("breeder_info") if owner else None,
+        }
+    }

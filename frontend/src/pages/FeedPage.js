@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
-import { Heart, MessageCircle, Send, Trash2, Shield } from 'lucide-react';
+import { Heart, MessageCircle, Send, Trash2, Shield, Trophy, Star, PawPrint } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -18,6 +18,7 @@ export default function FeedPage() {
   const [commentTexts, setCommentTexts] = useState({});
   const [comments, setComments] = useState({});
   const [showComments, setShowComments] = useState({});
+  const [petOfWeek, setPetOfWeek] = useState(null);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -30,6 +31,16 @@ export default function FeedPage() {
   }, [API, authHeaders]);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
+
+  useEffect(() => {
+    const fetchPOTW = async () => {
+      try {
+        const res = await axios.get(`${API}/feed/pet-of-the-week`, { headers: authHeaders() });
+        if (res.data.pet) setPetOfWeek(res.data);
+      } catch {}
+    };
+    fetchPOTW();
+  }, [API, authHeaders]);
 
   const handlePost = async () => {
     if (!newPost.trim()) return;
@@ -110,6 +121,43 @@ export default function FeedPage() {
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6" data-testid="feed-page">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'Outfit' }}>Feed</h1>
+
+        {/* Pet of the Week */}
+        {petOfWeek && petOfWeek.pet && (
+          <div className="rounded-2xl border-2 border-secondary/30 bg-gradient-to-r from-secondary/5 via-card to-primary/5 p-5 animate-fade-in-up" data-testid="pet-of-the-week">
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="w-5 h-5 text-secondary" />
+              <span className="text-xs font-bold tracking-[0.15em] uppercase text-secondary">Pet of the Week</span>
+              <Star className="w-3.5 h-3.5 text-secondary fill-secondary" />
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {petOfWeek.pet.photos?.[0] ? (
+                  <img src={petOfWeek.pet.photos[0]} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <PawPrint className="w-8 h-8 text-secondary" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-lg" style={{ fontFamily: 'Outfit' }}>{petOfWeek.pet.name}</h3>
+                  {petOfWeek.pet.verified_breeder && (
+                    <Badge className="bg-secondary text-secondary-foreground text-[10px] verified-badge">Verified</Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{petOfWeek.pet.breed || petOfWeek.pet.species} {petOfWeek.pet.age ? `- ${petOfWeek.pet.age}` : ''}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Owner: {petOfWeek.owner?.name} {petOfWeek.owner?.breeder_info ? '(Breeder)' : ''}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="flex items-center gap-1 text-primary">
+                  <Heart className="w-4 h-4 fill-current" />
+                  <span className="text-sm font-bold">{petOfWeek.post?.likes_count || 0}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground">likes this week</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Create Post */}
         <div className="rounded-2xl border border-border bg-card p-6" data-testid="create-post">
