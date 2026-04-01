@@ -53,6 +53,17 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
   - [x] Certificate verification endpoint
 - [x] Professional Petbookin SVG seal/logo stamp for certificates
 
+## What's Been Implemented (Phase 2) - April 1, 2026
+- [x] Elegant certificate redesign: gold borders, ornate corners, embossed-style stamp, serif typography, pedigree section
+- [x] All-species breeder support: 12 species (dog, cat, bird, horse, rabbit, reptile, fish, hamster, ferret, guinea pig, exotic, other)
+- [x] Species-specific registries: 19 total (AKC, CKC, UKC, FCI, KC, TICA, CFA, GCCF, ACF, AFA, ABS, AQHA, APHA, USEF, ARBA, BRC, USARK, ANKC, Other)
+- [x] Pet-Friendly Places Map:
+  - [x] Interactive Leaflet map with OpenStreetMap tiles
+  - [x] Geocoding (city/zip/address search via Nominatim)
+  - [x] Place search via Overpass API (vets, pet stores, dog parks, groomers, parks)
+  - [x] Clickable place cards with phone, website, hours
+  - [x] Auto-detect user location
+
 ## Admin Credentials
 - Email: admin@petbookin.com
 - Password: PetbookinAdmin2026!
