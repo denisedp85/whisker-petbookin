@@ -69,6 +69,8 @@ class PetbookinCredentialRequest(BaseModel):
 class PostCreate(BaseModel):
     content: str
     pet_id: Optional[str] = None
+    post_type: str = "text"  # text, video, audio
+    media_url: Optional[str] = None
 
 class CommentCreate(BaseModel):
     content: str
@@ -77,15 +79,27 @@ class CommentCreate(BaseModel):
 # === ADMIN MODELS ===
 class RoleAssign(BaseModel):
     user_id: str
-    role: str  # user, moderator, manager
+    role: str  # user, moderator, manager or custom role id
     role_title: str = ""
 
 class TierAssign(BaseModel):
     user_id: str
     tier: str
 
+class CustomRoleCreate(BaseModel):
+    role_id: str
+    label: str
+    color: str = "#FF7A6A"
+    badge_text: str = ""
+    permissions: List[str] = []
+
 
 # === AI MODELS ===
 class BioGenerate(BaseModel):
     pet_id: str
     style: str = "friendly"
+
+# === MICRO-TRANSACTION MODELS ===
+class PackPurchase(BaseModel):
+    pack_id: str
+    origin_url: str

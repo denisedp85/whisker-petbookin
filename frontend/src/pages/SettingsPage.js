@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Settings, User, Palette, Shield, Crown } from 'lucide-react';
+import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -17,12 +17,23 @@ const PRESET_THEMES = [
   { name: 'Rose Gold', bg_color: '#FFF0F0', card_bg: '#FFFFFF', text_color: '#2E1A1A', accent_color: '#EC4899' },
 ];
 
+const AVATAR_BORDERS = [
+  { id: 'default', label: 'Default', style: 'border-2 border-border' },
+  { id: 'gold', label: 'Gold Ring', style: 'border-3 border-amber-400 ring-2 ring-amber-200' },
+  { id: 'rainbow', label: 'Rainbow', style: 'border-3 border-transparent bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 bg-clip-border' },
+  { id: 'coral', label: 'Coral Glow', style: 'border-3 border-primary ring-2 ring-primary/30' },
+  { id: 'purple', label: 'Purple Aura', style: 'border-3 border-purple-500 ring-2 ring-purple-300' },
+  { id: 'diamond', label: 'Diamond', style: 'border-3 border-cyan-400 ring-2 ring-cyan-200 shadow-lg shadow-cyan-100' },
+];
+
 export default function SettingsPage() {
   const { user, updateProfile, authHeaders, API, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [profileForm, setProfileForm] = useState({ name: user?.name || '', bio: user?.bio || '' });
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState(user?.profile_theme || PRESET_THEMES[0]);
+  const [transactions, setTransactions] = useState([]);
+  const [txnLoading, setTxnLoading] = useState(false);
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
@@ -47,9 +58,23 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchTransactions = useCallback(async () => {
+    setTxnLoading(true);
+    try {
+      const res = await axios.get(`${API}/stripe/payment-history`, { headers: authHeaders() });
+      setTransactions(res.data.transactions || []);
+    } catch {}
+    setTxnLoading(false);
+  }, [API, authHeaders]);
+
+  useEffect(() => {
+    if (activeTab === 'billing') fetchTransactions();
+  }, [activeTab, fetchTransactions]);
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'theme', label: 'Theme', icon: Palette },
+    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'account', label: 'Account', icon: Settings },
   ];
 
@@ -59,7 +84,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'Outfit' }}>Settings</h1>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -126,6 +151,7 @@ export default function SettingsPage() {
         {/* Theme Tab (MySpace-style) */}
         {activeTab === 'theme' && (
           <div className="space-y-6" data-testid="theme-settings">
+            {/* Preset themes */}
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="font-semibold mb-2" style={{ fontFamily: 'Outfit' }}>Profile Theme</h2>
               <p className="text-sm text-muted-foreground mb-6">Customize how your profile looks to others, just like the good old days.</p>
@@ -152,6 +178,71 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* Avatar border */}
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h3 className="font-semibold mb-2" style={{ fontFamily: 'Outfit' }}>Avatar Border</h3>
+              <p className="text-sm text-muted-foreground mb-4">Choose how your profile picture looks</p>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+                {AVATAR_BORDERS.map((ab) => (
+                  <button
+                    key={ab.id}
+                    onClick={() => handleThemeUpdate({ ...theme, avatar_border: ab.id })}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
+                      (theme.avatar_border || 'default') === ab.id ? 'bg-primary/10 ring-2 ring-primary' : 'hover:bg-muted'
+                    }`}
+                    data-testid={`avatar-border-${ab.id}`}
+                  >
+                    <div className={`w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold ${ab.style}`}>
+                      {user?.name?.charAt(0) || 'P'}
+                    </div>
+                    <span className="text-[10px] font-medium">{ab.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* MySpace extras: Music + Background */}
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h3 className="font-semibold mb-4" style={{ fontFamily: 'Outfit' }}>
+                <Sparkles className="w-4 h-4 inline mr-2 text-secondary" />
+                MySpace Vibes
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    <Music className="w-3.5 h-3.5" /> Profile Music URL
+                  </label>
+                  <Input
+                    placeholder="https://example.com/song.mp3"
+                    value={theme.music_url || ''}
+                    onChange={(e) => setTheme({ ...theme, music_url: e.target.value })}
+                    className="rounded-xl"
+                    data-testid="music-url-input"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Visitors to your profile will hear this song</p>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    <Image className="w-3.5 h-3.5" /> Background Image URL
+                  </label>
+                  <Input
+                    placeholder="https://example.com/background.jpg"
+                    value={theme.video_bg_url || ''}
+                    onChange={(e) => setTheme({ ...theme, video_bg_url: e.target.value })}
+                    className="rounded-xl"
+                    data-testid="bg-image-url-input"
+                  />
+                </div>
+                <Button
+                  onClick={() => handleThemeUpdate(theme)}
+                  className="rounded-full bg-primary text-white hover:bg-primary/90"
+                  data-testid="save-myspace-btn"
+                >
+                  Save MySpace Settings
+                </Button>
+              </div>
+            </div>
+
             {/* Custom colors */}
             <div className="rounded-2xl border border-border bg-card p-6">
               <h3 className="font-semibold mb-4" style={{ fontFamily: 'Outfit' }}>Custom Colors</h3>
@@ -166,10 +257,7 @@ export default function SettingsPage() {
                     <input
                       type="color"
                       value={theme[key] || '#FFFFFF'}
-                      onChange={(e) => {
-                        const newTheme = { ...theme, [key]: e.target.value };
-                        setTheme(newTheme);
-                      }}
+                      onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
                       className="w-10 h-10 rounded-xl border border-border cursor-pointer"
                     />
                     <div>
@@ -190,6 +278,54 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* Billing Tab */}
+        {activeTab === 'billing' && (
+          <div className="space-y-6" data-testid="billing-settings">
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Receipt className="w-5 h-5 text-primary" />
+                <h2 className="font-semibold" style={{ fontFamily: 'Outfit' }}>Payment History</h2>
+              </div>
+              {txnLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto" />
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CreditCard className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No payment history yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {transactions.map((txn, i) => (
+                    <div key={txn.session_id || i} className="flex items-center justify-between py-3 border-b border-border last:border-0" data-testid={`txn-${i}`}>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {txn.tier_name || txn.pack_name || 'Purchase'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                          {txn.purchase_type === 'ala_carte' && <Badge variant="outline" className="ml-2 text-[9px]">Add-on</Badge>}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">${txn.amount?.toFixed(2)}</p>
+                        <Badge className={`text-[10px] ${
+                          txn.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
+                          txn.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {txn.payment_status || 'unknown'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Account Tab */}
         {activeTab === 'account' && (
           <div className="rounded-2xl border border-border bg-card p-6" data-testid="account-settings">
@@ -200,7 +336,14 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium">AI Bio Generations</p>
                   <p className="text-xs text-muted-foreground">Used this billing cycle</p>
                 </div>
-                <span className="text-sm font-medium">{user?.ai_generations_used || 0}</span>
+                <span className="text-sm font-medium">{user?.ai_generations_used || 0}{user?.ai_generations_bonus ? ` (+${user.ai_generations_bonus} bonus)` : ''}</span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-border">
+                <div>
+                  <p className="text-sm font-medium">Promotions Available</p>
+                  <p className="text-xs text-muted-foreground">Post promotions you can use</p>
+                </div>
+                <span className="text-sm font-medium">{user?.promotions_available || 0}</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-border">
                 <div>

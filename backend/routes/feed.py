@@ -8,6 +8,12 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/feed", tags=["Feed"])
 
+TIER_ORDER = ["free", "prime", "pro", "ultra", "mega"]
+MEDIA_CREATE_TIERS = {
+    "video": ["ultra", "mega"],
+    "audio": ["pro", "ultra", "mega"],
+}
+
 
 def get_db(request: Request):
     return request.app.state.db
@@ -19,6 +25,18 @@ async def create_post(data: PostCreate, request: Request):
     user = await get_current_user(request, db)
     now = datetime.now(timezone.utc)
 
+    post_type = data.post_type or "text"
+    if post_type in MEDIA_CREATE_TIERS:
+        user_tier = user.get("membership_tier", "free")
+        if user_tier not in MEDIA_CREATE_TIERS[post_type]:
+            allowed = ", ".join(t.capitalize() for t in MEDIA_CREATE_TIERS[post_type])
+            raise HTTPException(
+                status_code=403,
+                detail=f"{post_type.capitalize()} posts require {allowed} tier or higher"
+            )
+        if not data.media_url:
+            raise HTTPException(status_code=400, detail=f"Media URL required for {post_type} posts")
+
     post_doc = {
         "post_id": generate_post_id(),
         "author_id": user["user_id"],
@@ -27,6 +45,8 @@ async def create_post(data: PostCreate, request: Request):
         "author_tier": user.get("membership_tier", "free"),
         "pet_id": data.pet_id,
         "content": data.content,
+        "post_type": post_type,
+        "media_url": data.media_url or "",
         "media": [],
         "likes": [],
         "likes_count": 0,

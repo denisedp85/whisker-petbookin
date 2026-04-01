@@ -4,15 +4,85 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
-import { Heart, MessageCircle, Send, Trash2, Shield, Trophy, Star, PawPrint } from 'lucide-react';
+import { Heart, MessageCircle, Send, Trash2, Trophy, Star, PawPrint, Video, Music, Type, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+
+const TIER_ORDER = ['free', 'prime', 'pro', 'ultra', 'mega'];
+
+function canCreateType(tier, type) {
+  const t = tier || 'free';
+  if (type === 'video') return ['ultra', 'mega'].includes(t);
+  if (type === 'audio') return ['pro', 'ultra', 'mega'].includes(t);
+  return true;
+}
+
+function extractVideoEmbed(url) {
+  if (!url) return null;
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
+  // TikTok - just show as link
+  if (url.includes('tiktok.com')) return { type: 'tiktok', url };
+  // Direct video URL
+  if (url.match(/\.(mp4|webm|ogg)(\?|$)/i)) return { type: 'direct', url };
+  return { type: 'link', url };
+}
+
+function VideoEmbed({ url }) {
+  const embed = extractVideoEmbed(url);
+  if (!embed) return null;
+  if (embed.type === 'youtube') {
+    return (
+      <div className="relative rounded-xl overflow-hidden bg-black aspect-video mt-3">
+        <iframe
+          src={`https://www.youtube.com/embed/${embed.id}`}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title="Video"
+        />
+      </div>
+    );
+  }
+  if (embed.type === 'direct') {
+    return (
+      <video controls className="w-full rounded-xl mt-3 max-h-[400px] bg-black">
+        <source src={embed.url} />
+      </video>
+    );
+  }
+  return (
+    <a href={embed.url} target="_blank" rel="noopener noreferrer" className="block mt-3 p-3 rounded-xl bg-muted/50 border border-border text-sm text-primary hover:underline truncate">
+      {embed.url}
+    </a>
+  );
+}
+
+function AudioEmbed({ url }) {
+  if (!url) return null;
+  return (
+    <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200/50">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+          <Music className="w-5 h-5 text-purple-500" />
+        </div>
+        <span className="text-sm font-medium text-purple-700">Audio Clip</span>
+      </div>
+      <audio controls className="w-full" preload="metadata">
+        <source src={url} />
+      </audio>
+    </div>
+  );
+}
 
 export default function FeedPage() {
   const { user, pets, authHeaders, API } = useAuth();
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [selectedPet, setSelectedPet] = useState('');
+  const [postType, setPostType] = useState('text');
+  const [mediaUrl, setMediaUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [commentTexts, setCommentTexts] = useState({});
@@ -44,18 +114,26 @@ export default function FeedPage() {
 
   const handlePost = async () => {
     if (!newPost.trim()) return;
+    if (postType !== 'text' && !mediaUrl.trim()) {
+      toast.error(`Please provide a ${postType} URL`);
+      return;
+    }
     setPosting(true);
     try {
       await axios.post(`${API}/feed/posts`, {
         content: newPost,
-        pet_id: selectedPet || undefined
+        pet_id: selectedPet || undefined,
+        post_type: postType,
+        media_url: postType !== 'text' ? mediaUrl : undefined,
       }, { headers: authHeaders() });
       setNewPost('');
       setSelectedPet('');
+      setMediaUrl('');
+      setPostType('text');
       fetchPosts();
       toast.success('Post shared!');
     } catch (e) {
-      toast.error('Failed to post');
+      toast.error(e.response?.data?.detail || 'Failed to post');
     }
     setPosting(false);
   };
@@ -117,6 +195,12 @@ export default function FeedPage() {
     return `${Math.floor(hrs / 24)}d ago`;
   };
 
+  const postTypes = [
+    { id: 'text', icon: Type, label: 'Text', tier: null },
+    { id: 'video', icon: Video, label: 'Video', tier: 'Ultra+' },
+    { id: 'audio', icon: Music, label: 'Audio', tier: 'Pro+' },
+  ];
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6" data-testid="feed-page">
@@ -141,19 +225,15 @@ export default function FeedPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-lg" style={{ fontFamily: 'Outfit' }}>{petOfWeek.pet.name}</h3>
-                  {petOfWeek.pet.verified_breeder && (
-                    <Badge className="bg-secondary text-secondary-foreground text-[10px] verified-badge">Verified</Badge>
-                  )}
                 </div>
-                <p className="text-sm text-muted-foreground">{petOfWeek.pet.breed || petOfWeek.pet.species} {petOfWeek.pet.age ? `- ${petOfWeek.pet.age}` : ''}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Owner: {petOfWeek.owner?.name} {petOfWeek.owner?.breeder_info ? '(Breeder)' : ''}</p>
+                <p className="text-sm text-muted-foreground">{petOfWeek.pet.breed || petOfWeek.pet.species}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Owner: {petOfWeek.owner?.name}</p>
               </div>
               <div className="text-right flex-shrink-0">
                 <div className="flex items-center gap-1 text-primary">
                   <Heart className="w-4 h-4 fill-current" />
                   <span className="text-sm font-bold">{petOfWeek.post?.likes_count || 0}</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground">likes this week</p>
               </div>
             </div>
           </div>
@@ -166,13 +246,52 @@ export default function FeedPage() {
               {user?.picture ? <img src={user.picture} alt="" className="w-full h-full object-cover" /> : user?.name?.charAt(0)}
             </div>
             <div className="flex-1 space-y-3">
+              {/* Post type selector */}
+              <div className="flex gap-1.5">
+                {postTypes.map((pt) => {
+                  const allowed = canCreateType(user?.membership_tier, pt.id);
+                  return (
+                    <button
+                      key={pt.id}
+                      onClick={() => allowed && setPostType(pt.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        postType === pt.id
+                          ? 'bg-primary/10 text-primary'
+                          : allowed
+                            ? 'text-muted-foreground hover:bg-muted'
+                            : 'text-muted-foreground/40 cursor-not-allowed'
+                      }`}
+                      data-testid={`post-type-${pt.id}`}
+                      disabled={!allowed}
+                    >
+                      <pt.icon className="w-3.5 h-3.5" />
+                      {pt.label}
+                      {!allowed && <Lock className="w-3 h-3" />}
+                      {pt.tier && <span className="text-[9px] opacity-60">{pt.tier}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
               <Textarea
-                placeholder="What's your pet up to?"
+                placeholder={postType === 'text' ? "What's your pet up to?" : postType === 'video' ? "Describe your video..." : "What's this audio about?"}
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
                 className="rounded-xl border-border resize-none min-h-[80px]"
                 data-testid="post-content-input"
               />
+
+              {postType !== 'text' && (
+                <input
+                  type="url"
+                  placeholder={postType === 'video' ? "Paste video URL (YouTube, TikTok, .mp4)" : "Paste audio URL (.mp3, SoundCloud)"}
+                  value={mediaUrl}
+                  onChange={(e) => setMediaUrl(e.target.value)}
+                  className="w-full border border-border rounded-xl px-4 py-2.5 bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  data-testid="media-url-input"
+                />
+              )}
+
               <div className="flex items-center justify-between">
                 {pets.length > 0 && (
                   <select
@@ -222,6 +341,12 @@ export default function FeedPage() {
                     {post.author_tier && post.author_tier !== 'free' && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{post.author_tier.toUpperCase()}</Badge>
                     )}
+                    {post.post_type && post.post_type !== 'text' && (
+                      <Badge className={`text-[10px] px-1.5 py-0 ${post.post_type === 'video' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                        {post.post_type === 'video' ? <Video className="w-3 h-3 mr-0.5 inline" /> : <Music className="w-3 h-3 mr-0.5 inline" />}
+                        {post.post_type.charAt(0).toUpperCase() + post.post_type.slice(1)}
+                      </Badge>
+                    )}
                     {post.pet_name && (
                       <span className="text-xs text-muted-foreground">with {post.pet_name}</span>
                     )}
@@ -236,10 +361,14 @@ export default function FeedPage() {
               </div>
 
               {/* Content */}
-              <p className="text-sm leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
+
+              {/* Media embed */}
+              {post.post_type === 'video' && post.media_url && <VideoEmbed url={post.media_url} />}
+              {post.post_type === 'audio' && post.media_url && <AudioEmbed url={post.media_url} />}
 
               {/* Actions */}
-              <div className="flex items-center gap-4 pt-3 border-t border-border">
+              <div className="flex items-center gap-4 pt-3 mt-4 border-t border-border">
                 <button
                   onClick={() => handleLike(post.post_id)}
                   className={`flex items-center gap-1.5 text-sm transition-colors ${

@@ -35,10 +35,9 @@ async def stripe_webhook(request: Request):
         session_id = webhook_response.session_id
         metadata = webhook_response.metadata or {}
         user_id = metadata.get("user_id")
-        tier_id = metadata.get("tier_id")
 
-        if not user_id or not tier_id:
-            logger.warning(f"Webhook missing metadata: user_id={user_id}, tier_id={tier_id}")
+        if not user_id:
+            logger.warning("Webhook missing user_id in metadata")
             return {"status": "ok"}
 
         txn = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
@@ -52,14 +51,33 @@ async def stripe_webhook(request: Request):
             upsert=True,
         )
 
-        await db.users.update_one(
-            {"user_id": user_id},
-            {"$set": {
-                "membership_tier": tier_id,
-                "membership_status": "active",
-                "updated_at": now,
-            }},
-        )
-        logger.info(f"Webhook: User {user_id} upgraded to {tier_id}")
+        purchase_type = metadata.get("purchase_type", "subscription")
+
+        if purchase_type == "ala_carte":
+            pack_type = metadata.get("pack_type")
+            pack_qty = int(metadata.get("pack_quantity", "0"))
+            if pack_type == "ai_gens":
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {"$inc": {"ai_generations_bonus": pack_qty}, "$set": {"updated_at": now}},
+                )
+            elif pack_type == "promotion":
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {"$inc": {"promotions_available": pack_qty}, "$set": {"updated_at": now}},
+                )
+            logger.info(f"Webhook: User {user_id} purchased {pack_type} x{pack_qty}")
+        else:
+            tier_id = metadata.get("tier_id")
+            if tier_id:
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {"$set": {
+                        "membership_tier": tier_id,
+                        "membership_status": "active",
+                        "updated_at": now,
+                    }},
+                )
+                logger.info(f"Webhook: User {user_id} upgraded to {tier_id}")
 
     return {"status": "ok"}

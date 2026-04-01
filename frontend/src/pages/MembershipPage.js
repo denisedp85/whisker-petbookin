@@ -116,6 +116,29 @@ export default function MembershipPage() {
     }
   };
 
+  const handlePurchasePack = async (packId) => {
+    setLoadingTier(packId);
+    try {
+      const res = await fetch(`${API}/stripe/purchase-pack`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pack_id: packId,
+          origin_url: window.location.origin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to create checkout');
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      toast.error(err.message || 'Purchase error');
+    } finally {
+      setLoadingTier(null);
+    }
+  };
+
   const currentTierIndex = TIER_ORDER.indexOf(currentTier);
 
   return (
@@ -202,13 +225,38 @@ export default function MembershipPage() {
         </div>
 
         {/* A la carte */}
-        <div className="rounded-2xl border border-border bg-card p-8 text-center" data-testid="ala-carte-section">
-          <Sparkles className="w-8 h-8 text-secondary mx-auto mb-3" />
-          <h2 className="text-xl font-bold mb-2" style={{ fontFamily: 'Outfit' }}>A La Carte Purchases</h2>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
-            Don't want a full subscription? Purchase individual features like extra AI generations or post promotions.
-          </p>
-          <Badge variant="outline" className="text-sm">Coming Soon</Badge>
+        <div className="rounded-2xl border border-border bg-card p-8" data-testid="ala-carte-section">
+          <div className="text-center mb-6">
+            <Sparkles className="w-8 h-8 text-secondary mx-auto mb-3" />
+            <h2 className="text-xl font-bold" style={{ fontFamily: 'Outfit' }}>A La Carte Purchases</h2>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Buy individual features without a full subscription upgrade.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { id: 'ai_10', name: '10 AI Generations', price: '$2.99', desc: 'Generate 10 more AI-powered pet bios', color: 'from-blue-500 to-cyan-500' },
+              { id: 'ai_50', name: '50 AI Generations', price: '$9.99', desc: 'Bulk pack of 50 AI bio generations', color: 'from-purple-500 to-pink-500' },
+              { id: 'promo_1', name: 'Post Promotion', price: '$4.99', desc: 'Promote one post for 1 week', color: 'from-amber-500 to-orange-500' },
+            ].map((pack) => (
+              <div key={pack.id} className="rounded-xl border border-border p-5 hover:shadow-md transition-all" data-testid={`pack-${pack.id}`}>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${pack.color} flex items-center justify-center mb-3`}>
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="font-semibold text-sm">{pack.name}</h3>
+                <p className="text-xl font-bold mt-1" style={{ fontFamily: 'Outfit' }}>{pack.price}</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">{pack.desc}</p>
+                <button
+                  onClick={() => handlePurchasePack(pack.id)}
+                  disabled={!!pollingStatus || loadingTier === pack.id}
+                  className={`w-full py-2 rounded-full text-xs font-medium bg-gradient-to-r ${pack.color} text-white hover:opacity-90 transition-all disabled:opacity-50`}
+                  data-testid={`buy-${pack.id}`}
+                >
+                  {loadingTier === pack.id ? 'Redirecting...' : 'Buy Now'}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </AppLayout>

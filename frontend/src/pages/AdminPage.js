@@ -4,11 +4,11 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
-import { Shield, Users, PawPrint, FileText, Award, Trash2, Crown, UserCog } from 'lucide-react';
+import { Shield, Users, PawPrint, FileText, Award, Trash2, Crown, UserCog, Plus, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const ROLES = ['user', 'moderator', 'manager'];
+const BUILT_IN_ROLES = ['user', 'moderator', 'manager'];
 const TIERS = ['free', 'prime', 'pro', 'ultra', 'mega'];
 
 export default function AdminPage() {
@@ -19,15 +19,19 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [roleForm, setRoleForm] = useState({ user_id: '', role: 'moderator', role_title: '' });
   const [tierForm, setTierForm] = useState({ user_id: '', tier: 'prime' });
+  const [customRoles, setCustomRoles] = useState([]);
+  const [newRole, setNewRole] = useState({ role_id: '', label: '', color: '#FF7A6A', badge_text: '' });
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsRes, usersRes] = await Promise.all([
+      const [statsRes, usersRes, rolesRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers: authHeaders() }),
-        axios.get(`${API}/admin/users`, { headers: authHeaders() })
+        axios.get(`${API}/admin/users`, { headers: authHeaders() }),
+        axios.get(`${API}/admin/custom-roles`, { headers: authHeaders() }).catch(() => ({ data: { roles: [] } })),
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data.users || []);
+      setCustomRoles(rolesRes.data.roles || []);
     } catch (e) {
       console.error('Admin fetch failed', e);
     }
@@ -35,6 +39,8 @@ export default function AdminPage() {
   }, [API, authHeaders]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const allRoles = [...BUILT_IN_ROLES, ...customRoles.map(r => r.role_id)];
 
   const handleAssignRole = async (e) => {
     e.preventDefault();
@@ -69,6 +75,36 @@ export default function AdminPage() {
     }
   };
 
+  const handleCreateRole = async (e) => {
+    e.preventDefault();
+    if (!newRole.role_id || !newRole.label) {
+      toast.error('Role ID and label are required');
+      return;
+    }
+    try {
+      await axios.post(`${API}/admin/custom-roles`, {
+        ...newRole,
+        badge_text: newRole.badge_text || newRole.label,
+      }, { headers: authHeaders() });
+      toast.success('Custom role created!');
+      setNewRole({ role_id: '', label: '', color: '#FF7A6A', badge_text: '' });
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed');
+    }
+  };
+
+  const handleDeleteRole = async (roleId) => {
+    if (!window.confirm(`Delete role "${roleId}"? Users with this role will be reset to "user".`)) return;
+    try {
+      await axios.delete(`${API}/admin/custom-roles/${roleId}`, { headers: authHeaders() });
+      toast.success('Role deleted');
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed');
+    }
+  };
+
   if (!user?.is_admin) {
     return (
       <AppLayout>
@@ -83,7 +119,8 @@ export default function AdminPage() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Shield },
     { id: 'users', label: 'Users', icon: Users },
-    { id: 'roles', label: 'Roles', icon: UserCog },
+    { id: 'roles', label: 'Roles & Tiers', icon: UserCog },
+    { id: 'custom-roles', label: 'Custom Roles', icon: Palette },
   ];
 
   return (
@@ -91,7 +128,7 @@ export default function AdminPage() {
       <div className="space-y-6" data-testid="admin-page">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'Outfit' }}>Admin Dashboard</h1>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -147,47 +184,56 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map((u) => (
-                        <tr key={u.user_id} className="border-t border-border hover:bg-muted/20">
-                          <td className="px-4 py-3">
-                            <div>
-                              <p className="font-medium">{u.name}</p>
-                              <p className="text-xs text-muted-foreground">{u.email}</p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="text-xs capitalize">{u.role || 'user'}</Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="text-xs uppercase">{u.membership_tier || 'free'}</Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            {u.breeder_info ? (
-                              <Badge className={`text-[10px] ${u.breeder_info.is_verified ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                {u.breeder_info.is_verified ? 'Verified' : 'Registered'}
-                              </Badge>
-                            ) : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {!u.is_admin && (
-                              <button
-                                onClick={() => handleDeleteUser(u.user_id)}
-                                className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                                data-testid={`delete-user-${u.user_id}`}
+                      {users.map((u) => {
+                        const customRole = customRoles.find(r => r.role_id === u.role);
+                        return (
+                          <tr key={u.user_id} className="border-t border-border hover:bg-muted/20">
+                            <td className="px-4 py-3">
+                              <div>
+                                <p className="font-medium">{u.name}</p>
+                                <p className="text-xs text-muted-foreground">{u.email}</p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant="outline"
+                                className="text-xs capitalize"
+                                style={customRole ? { borderColor: customRole.color, color: customRole.color } : {}}
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                                {u.role_title || u.role || 'user'}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant="outline" className="text-xs uppercase">{u.membership_tier || 'free'}</Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              {u.breeder_info ? (
+                                <Badge className={`text-[10px] ${u.breeder_info.is_verified ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                  {u.breeder_info.is_verified ? 'Verified' : 'Registered'}
+                                </Badge>
+                              ) : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {!u.is_admin && (
+                                <button
+                                  onClick={() => handleDeleteUser(u.user_id)}
+                                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                  data-testid={`delete-user-${u.user_id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </div>
             )}
 
-            {/* Roles */}
+            {/* Roles & Tiers */}
             {activeTab === 'roles' && (
               <div className="space-y-6" data-testid="admin-roles">
                 <div className="rounded-2xl border border-border bg-card p-6">
@@ -210,7 +256,16 @@ export default function AdminPage() {
                       className="w-full border border-border rounded-xl px-4 py-2.5 bg-background text-sm"
                       data-testid="role-select"
                     >
-                      {ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                      <optgroup label="Built-in Roles">
+                        {BUILT_IN_ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                      </optgroup>
+                      {customRoles.length > 0 && (
+                        <optgroup label="Custom Roles">
+                          {customRoles.map(r => (
+                            <option key={r.role_id} value={r.role_id}>{r.label}</option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                     <Input placeholder="Custom title (optional)" value={roleForm.role_title} onChange={(e) => setRoleForm({...roleForm, role_title: e.target.value})} className="rounded-xl" data-testid="role-title-input" />
                     <Button type="submit" className="rounded-full bg-primary text-white hover:bg-primary/90" data-testid="assign-role-btn">
@@ -245,6 +300,109 @@ export default function AdminPage() {
                       <Crown className="w-4 h-4 mr-2" /> Assign Tier
                     </Button>
                   </form>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Roles */}
+            {activeTab === 'custom-roles' && (
+              <div className="space-y-6" data-testid="admin-custom-roles">
+                {/* Create new role */}
+                <div className="rounded-2xl border border-border bg-card p-6">
+                  <h3 className="font-semibold mb-4" style={{ fontFamily: 'Outfit' }}>
+                    <Plus className="w-4 h-4 inline mr-2" />
+                    Create Custom Role
+                  </h3>
+                  <form onSubmit={handleCreateRole} className="space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 block">Role ID</label>
+                        <Input
+                          placeholder="e.g., content_creator"
+                          value={newRole.role_id}
+                          onChange={(e) => setNewRole({...newRole, role_id: e.target.value.toLowerCase().replace(/\s/g, '_')})}
+                          className="rounded-xl"
+                          data-testid="new-role-id"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 block">Display Label</label>
+                        <Input
+                          placeholder="e.g., Content Creator"
+                          value={newRole.label}
+                          onChange={(e) => setNewRole({...newRole, label: e.target.value})}
+                          className="rounded-xl"
+                          data-testid="new-role-label"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 block">Badge Text</label>
+                        <Input
+                          placeholder="Short text shown in badge"
+                          value={newRole.badge_text}
+                          onChange={(e) => setNewRole({...newRole, badge_text: e.target.value})}
+                          className="rounded-xl"
+                          data-testid="new-role-badge"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 block">Color</label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="color"
+                            value={newRole.color}
+                            onChange={(e) => setNewRole({...newRole, color: e.target.value})}
+                            className="w-10 h-10 rounded-xl border border-border cursor-pointer"
+                          />
+                          <span className="text-sm text-muted-foreground">{newRole.color}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button type="submit" className="rounded-full bg-primary text-white hover:bg-primary/90" data-testid="create-role-btn">
+                      <Plus className="w-4 h-4 mr-2" /> Create Role
+                    </Button>
+                  </form>
+                </div>
+
+                {/* Existing custom roles */}
+                <div className="rounded-2xl border border-border bg-card p-6">
+                  <h3 className="font-semibold mb-4" style={{ fontFamily: 'Outfit' }}>Existing Custom Roles</h3>
+                  {customRoles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">No custom roles yet. Create one above!</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {customRoles.map((role) => {
+                        const assignedCount = users.filter(u => u.role === role.role_id).length;
+                        return (
+                          <div key={role.role_id} className="flex items-center justify-between p-4 rounded-xl border border-border" data-testid={`custom-role-${role.role_id}`}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${role.color}20` }}>
+                                <UserCog className="w-4 h-4" style={{ color: role.color }} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{role.label}</span>
+                                  <Badge style={{ backgroundColor: `${role.color}20`, color: role.color, borderColor: role.color }} className="text-[10px] border">
+                                    {role.badge_text || role.label}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">ID: {role.role_id} &middot; {assignedCount} user{assignedCount !== 1 ? 's' : ''}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteRole(role.role_id)}
+                              className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                              data-testid={`delete-role-${role.role_id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
