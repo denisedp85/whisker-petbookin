@@ -24,7 +24,7 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
 - Object Storage: Emergent Object Storage for uploads
 
 ## What's Been Implemented (Phase 1) - April 1, 2026
-- [x] Clean modular backend architecture (routes/auth, routes/pets, routes/breeder, routes/feed, routes/admin, routes/ai, routes/search)
+- [x] Clean modular backend architecture (routes/auth, routes/pets, routes/breeder, routes/feed, routes/admin, routes/ai, routes/search, routes/certificates)
 - [x] Email/password registration and login
 - [x] Google OAuth (Emergent-managed)
 - [x] JWT + session token authentication
@@ -40,6 +40,18 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
 - [x] Coral + mustard theme applied
 - [x] Error boundaries for crash prevention
 - [x] Mobile responsive with bottom tab bar
+
+## What's Been Implemented (Phase 1.5) - April 1, 2026
+- [x] Pet of the Week spotlight banner on feed (auto-highlights most-liked pet weekly)
+- [x] Petbookin Certification System (AKC-style, cheaper pricing):
+  - [x] Individual pet registration with certificate (PBK-CERT-YYYY-XXXXXX)
+  - [x] Litter registration (PBK-LTR-YYYY-XXXXXX)
+  - [x] Pedigree tracking (sire, dam, bloodline)
+  - [x] Ownership transfer (like AKC does when selling a puppy)
+  - [x] Tiered fees: $12.99/pet, $29.99/litter, $9.99/transfer (Mega=FREE, Ultra=50% off, Pro=25% off)
+  - [x] Professional digital certificate with Petbookin seal/stamp
+  - [x] Certificate verification endpoint
+- [x] Professional Petbookin SVG seal/logo stamp for certificates
 
 ## Admin Credentials
 - Email: admin@petbookin.com
@@ -67,7 +79,7 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
 - Daily calendar check-ins
 
 ## DB Collections
-- users, pets, posts, comments, user_sessions
+- users, pets, posts, comments, user_sessions, certificates, litters
 
 ## Key API Endpoints
 - Auth: /api/auth/register, /api/auth/login, /api/auth/google-session, /api/auth/me, /api/auth/profile, /api/auth/theme, /api/auth/logout
@@ -76,4 +88,5 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
 - Breeder: /api/breeder/register, /api/breeder/credential/external, /api/breeder/credential/petbookin, /api/breeder/verify, /api/breeder/directory
 - Admin: /api/admin/stats, /api/admin/users, /api/admin/assign-role, /api/admin/assign-tier
 - AI: /api/ai/generate-bio, /api/ai/limits
-- Search: /api/search
+- Certificates: /api/certificates/register-pet, /api/certificates/register-litter, /api/certificates/transfer, /api/certificates/mine, /api/certificates/issued, /api/certificates/litters, /api/certificates/verify/{cert_id}, /api/certificates/fees
+- Feed Pet of Week: /api/feed/pet-of-the-week
