@@ -160,13 +160,12 @@ async def payment_history(request: Request):
 @router.post("/purchase-pack")
 async def purchase_pack(request: Request):
     from utils.auth import get_current_user
-    import json as json_mod
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+
     body = await request.json()
     pack_id = body.get("pack_id")
     origin_url = body.get("origin_url")
-
-    db = request.app.state.db
-    user = await get_current_user(request, db)
 
     if pack_id not in ALA_CARTE_PACKS:
         raise HTTPException(status_code=400, detail="Invalid pack")

@@ -6,8 +6,10 @@
 - Role: owner (admin)
 - Tier: mega
 
-## Test User (create via registration)
-- Can register with any email/password via the sign-up form
+## Free Test User
+- Email: freeuser@test.com
+- Password: Test1234!
+- Tier: free
 
 ## Stripe Test Card
 - Card: 4242 4242 4242 4242

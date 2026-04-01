@@ -3,116 +3,87 @@
 ## Original Problem Statement
 Build "Petbookin" - A complete social network platform for pets. The platform serves pet owners, breeders (verified and hobby), and admins. Features include breeder registry with club credentials (AKC/CKC/UKC + Petbookin), tiered subscriptions (Free/Prime/Pro/Ultra/Mega), AI-generated pet bios, social feed, marketplace, gaming, TikTok-style video/audio content, and MySpace-style profile customization.
 
-## Core Requirements
-- Email/Password + Google OAuth authentication
-- Pet profiles with species, breeds, photos
-- Social feed with posts, likes, comments
-- Breeder Registry with external credentials (AKC, CKC, UKC, FCI, KC, ANKC) and Petbookin official credentials
-- Verified Breeder Badge for subscribed breeders with credentials
-- Admin dashboard with role management (user/moderator/manager)
-- Tiered AI bio generation (quality/features scale with tier)
-- MySpace-style profile theme customization
-- Left sidebar navigation with grouped sections
-- Coral (#FF7A6A) + Mustard (#F2B824) color theme
-- Real/professional pet imagery (no cartoon/comic)
-
 ## Architecture
 - Backend: FastAPI + Motor (Async MongoDB) + JWT Auth
 - Frontend: React + Tailwind CSS + Shadcn UI
 - Database: MongoDB (test_database)
-- Integrations: Emergent Google Auth, Emergent LLM (GPT-5.2 for AI bios), Stripe (subscriptions)
-- Object Storage: Emergent Object Storage for uploads
+- Integrations: Emergent Google Auth, Emergent LLM (GPT-5.2 for AI bios), Stripe (subscriptions + a la carte)
+- Maps: Leaflet + Overpass API (OSM)
 
-## What's Been Implemented (Phase 1) - April 1, 2026
-- [x] Clean modular backend architecture (routes/auth, routes/pets, routes/breeder, routes/feed, routes/admin, routes/ai, routes/search, routes/certificates)
-- [x] Email/password registration and login
-- [x] Google OAuth (Emergent-managed)
+## Completed Features
+
+### Phase 1 - Core Platform (April 1, 2026)
+- [x] Clean modular backend (routes/auth, pets, breeder, feed, admin, ai, search, certificates, places, stripe, webhook)
+- [x] Email/password registration and login + Google OAuth (Emergent-managed)
 - [x] JWT + session token authentication
-- [x] Pet CRUD (create, read, update, delete, photo upload)
+- [x] Pet CRUD with photo upload
 - [x] Social feed (posts, likes, comments, delete)
-- [x] Breeder Registry (register, add AKC/CKC/UKC credentials, get Petbookin credentials, verification)
-- [x] Breeder Directory
+- [x] 12-Species Breeder Registry with AKC/CKC/UKC credentials + Petbookin credentials
+- [x] Breeder Directory + Verification
 - [x] Admin Dashboard (stats, user management, role assignment, tier assignment)
 - [x] Search (pets, users, breeders, posts)
-- [x] Settings (profile update, MySpace-style theme customization with presets + custom colors)
-- [x] Membership page (tier display, placeholder for Stripe)
+- [x] Settings (profile update, theme customization)
 - [x] Left sidebar navigation with grouped sections
-- [x] Coral + mustard theme applied
-- [x] Error boundaries for crash prevention
-- [x] Mobile responsive with bottom tab bar
+- [x] Coral (#FF7A6A) + Mustard (#F2B824) theme
+- [x] Error boundaries
 
-## What's Been Implemented (Phase 1.5) - April 1, 2026
-- [x] Pet of the Week spotlight banner on feed (auto-highlights most-liked pet weekly)
-- [x] Petbookin Certification System (AKC-style, cheaper pricing):
-  - [x] Individual pet registration with certificate (PBK-CERT-YYYY-XXXXXX)
-  - [x] Litter registration (PBK-LTR-YYYY-XXXXXX)
-  - [x] Pedigree tracking (sire, dam, bloodline)
-  - [x] Ownership transfer (like AKC does when selling a puppy)
-  - [x] Tiered fees: $12.99/pet, $29.99/litter, $9.99/transfer (Mega=FREE, Ultra=50% off, Pro=25% off)
-  - [x] Professional digital certificate with Petbookin seal/stamp
-  - [x] Certificate verification endpoint
-- [x] Professional Petbookin SVG seal/logo stamp for certificates
+### Phase 2 - Premium Features (April 1, 2026)
+- [x] Pet of the Week spotlight banner
+- [x] Petbookin Certification System (individual, litter, pedigree, ownership transfer)
+- [x] Professional SVG seal/logo stamp for certificates
+- [x] Elegant certificate redesign: gold borders, ornate corners, embossed stamp, serif typography
+- [x] Pet-Friendly Places Map (Leaflet, Overpass API, geocoding, place search)
 
-## What's Been Implemented (Phase 2) - April 1, 2026
-- [x] Elegant certificate redesign: gold borders, ornate corners, embossed-style stamp, serif typography, pedigree section
-- [x] All-species breeder support: 12 species (dog, cat, bird, horse, rabbit, reptile, fish, hamster, ferret, guinea pig, exotic, other)
-- [x] Species-specific registries: 19 total (AKC, CKC, UKC, FCI, KC, TICA, CFA, GCCF, ACF, AFA, ABS, AQHA, APHA, USEF, ARBA, BRC, USARK, ANKC, Other)
-- [x] Pet-Friendly Places Map:
-  - [x] Interactive Leaflet map with OpenStreetMap tiles
-  - [x] Geocoding (city/zip/address search via Nominatim)
-  - [x] Place search via Overpass API (vets, pet stores, dog parks, groomers, parks)
-  - [x] Clickable place cards with phone, website, hours
-  - [x] Auto-detect user location
+### Phase 3 - Monetization (April 1, 2026)
+- [x] Stripe Sandbox integration (4 tier subscriptions)
+- [x] POST /api/stripe/create-checkout-session + GET checkout-status
+- [x] POST /api/webhook/stripe (handles both subscriptions + a la carte)
+- [x] Frontend Membership page with Subscribe buttons + polling
+- [x] Tier pricing: Prime $4.99/wk, Pro $14.99/mo, Ultra $24.99/mo, Mega $39.99/mo
 
-## What's Been Implemented (Phase 3) - April 1, 2026
-- [x] Stripe Subscription Integration (Sandbox):
-  - [x] POST /api/stripe/create-checkout-session - tier-specific checkout with fixed server-side pricing
-  - [x] GET /api/stripe/checkout-status/{session_id} - payment polling with auto tier upgrade
-  - [x] POST /api/webhook/stripe - webhook event handler for checkout.session.completed
-  - [x] GET /api/stripe/publishable-key - frontend key endpoint
-  - [x] payment_transactions collection tracking all payment activity
-  - [x] Frontend Membership page with Subscribe buttons, Stripe redirect, and payment polling
-  - [x] Tier pricing: Prime $4.99/week, Pro $14.99/month, Ultra $24.99/month, Mega $39.99/month
-  - [x] Prevents downgrades, shows current plan status
-  - [x] Duplicate payment protection (idempotent status updates)
-
-## Admin Credentials
-- Email: admin@petbookin.com
-- Password: PetbookinAdmin2026!
+### Phase 4 - Features Expansion (April 1, 2026)
+- [x] Payment History (Settings > Billing tab)
+- [x] Custom Role Management System (admin creates/assigns roles with colors/badges)
+- [x] TikTok-style Video Posts (tier-gated: Ultra+ to create, everyone can view)
+- [x] Suno-style Audio Posts (tier-gated: Pro+ to create, everyone can view)
+- [x] YouTube iframe embeds + HTML5 audio player rendering in feed
+- [x] MySpace-style Profile Customization:
+  - [x] 6 Preset themes (Default, Ocean, Forest, Sunset, Midnight, Rose Gold)
+  - [x] 6 Avatar border styles (Default, Gold Ring, Rainbow, Coral Glow, Purple Aura, Diamond)
+  - [x] Profile Music URL (plays for visitors)
+  - [x] Background Image URL
+  - [x] Custom color picker (bg, card, text, accent)
+- [x] A La Carte Micro-transactions:
+  - [x] 10 AI Generations ($2.99)
+  - [x] 50 AI Generations ($9.99)
+  - [x] Post Promotion 1 Week ($4.99)
 
 ## Remaining Backlog
 
-### P0 - High Priority
-- A la carte purchases (extra AI gens, promotions)
-
 ### P1 - Medium Priority
-- TikTok-style video posts (tiered access - view for all, create for higher tiers)
-- Suno-style audio clips (tiered access)
-- MySpace-style profile customization enhancements (custom backgrounds, music/video backgrounds, avatar system, custom borders)
-- Role making system (admin assigns custom site roles and titles)
-- Micro-transactions (extra AI generations, post promotions)
 - Chat/Messaging system (real-time, pet-to-pet, group)
+- File upload for videos/audio (currently URL-based, needs object storage)
+- Post promotion display logic (promoted posts shown higher in feed)
 
 ### P2 - Lower Priority
-- Marketplace (buy/sell pets, accessories, services - separate subscription)
-- Point system for pet owners
+- Marketplace (buy/sell pets, accessories, services)
+- Point system for pet owners (earn from activities)
 - Mini-games (Pet Puzzle, Treat Catcher, Breed Quiz, Pet Show Champion)
-- Gaming section with separate subscription
-- VIP Features (tournaments, group gatherings)
-- Music/video background for profiles (MySpace-style)
+- Gaming section
+- VIP Features (tournaments, group gatherings for verified breeders)
 - Daily calendar check-ins
-
-## DB Collections
-- users, pets, posts, comments, user_sessions, certificates, litters, payment_transactions
 
 ## Key API Endpoints
 - Auth: /api/auth/register, /api/auth/login, /api/auth/google-session, /api/auth/me, /api/auth/profile, /api/auth/theme, /api/auth/logout
 - Pets: /api/pets, /api/pets/mine, /api/pets/{id}, /api/pets/{id}/photo
-- Feed: /api/feed/posts, /api/feed/posts/{id}/like, /api/feed/posts/{id}/comments, /api/feed/pet-of-the-week
+- Feed: /api/feed/posts (supports post_type=text|video|audio + media_url), /api/feed/posts/{id}/like, /api/feed/posts/{id}/comments, /api/feed/pet-of-the-week
 - Breeder: /api/breeder/register, /api/breeder/credential/external, /api/breeder/credential/petbookin, /api/breeder/verify, /api/breeder/directory
-- Admin: /api/admin/stats, /api/admin/users, /api/admin/assign-role, /api/admin/assign-tier
+- Admin: /api/admin/stats, /api/admin/users, /api/admin/assign-role, /api/admin/assign-tier, /api/admin/custom-roles (GET/POST/DELETE)
 - AI: /api/ai/generate-bio, /api/ai/limits
-- Certificates: /api/certificates/register-pet, /api/certificates/register-litter, /api/certificates/transfer, /api/certificates/mine, /api/certificates/issued, /api/certificates/litters, /api/certificates/verify/{cert_id}, /api/certificates/fees
-- Stripe: /api/stripe/create-checkout-session, /api/stripe/checkout-status/{session_id}, /api/stripe/publishable-key
+- Certificates: /api/certificates/register-pet, /api/certificates/register-litter, /api/certificates/transfer, /api/certificates/mine, /api/certificates/verify/{cert_id}, /api/certificates/fees
+- Stripe: /api/stripe/create-checkout-session, /api/stripe/checkout-status/{session_id}, /api/stripe/publishable-key, /api/stripe/payment-history, /api/stripe/purchase-pack, /api/stripe/pack-checkout-status/{session_id}
 - Webhook: /api/webhook/stripe
 - Places: /api/places/search
+
+## DB Collections
+users, pets, posts, comments, user_sessions, certificates, litters, payment_transactions, custom_roles
