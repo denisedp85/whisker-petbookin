@@ -1,236 +1,122 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import Navbar from '../components/Navbar';
-import { Button } from '../components/ui/button';
+import AppLayout from '../components/layout/AppLayout';
 import { Badge } from '../components/ui/badge';
-import { Crown, Star, Zap, Shield, Check, Sparkles, Loader2, PawPrint } from 'lucide-react';
-import axios from 'axios';
-import { toast } from 'sonner';
+import { Crown, Check, Sparkles, Shield, Zap, Star } from 'lucide-react';
 
-const TIERS = [
+const tiers = [
   {
-    id: 'prime_weekly',
-    name: 'PRIME',
+    id: 'prime',
+    name: 'Prime',
     price: '$4.99/week',
-    color: 'from-amber-400 to-orange-500',
-    shadow: 'shadow-amber-200/50',
-    border: 'border-amber-200',
-    icon: Star,
-    perks: [
-      'Free listing of your pet',
-      'Discounted fees on individual pet listings',
-      '7-day free trial included',
-    ],
-    recommended: false,
+    color: 'from-blue-500 to-blue-600',
+    features: ['10 AI Bio Generations', 'View Video/Audio Previews', 'Basic Breeder Badge', 'Priority Feed Placement'],
   },
   {
-    id: 'pro_monthly',
-    name: 'PRO',
-    price: '$14.99/mo',
-    color: 'from-blue-500 to-indigo-600',
-    shadow: 'shadow-blue-200/50',
-    border: 'border-blue-200',
-    icon: Shield,
-    perks: [
-      'All PRIME benefits',
-      'Verified Breeder badge & certificate',
-      'Up to 5 free AI-generated bios & themes',
-      '7-day free trial included',
-    ],
-    recommended: true,
+    id: 'pro',
+    name: 'Pro',
+    price: '$14.99/month',
+    color: 'from-purple-500 to-purple-600',
+    popular: true,
+    features: ['50 AI Bio Generations', 'Enhanced Bio Styles', 'View Full Videos/Audio', 'Breeder Verification Eligible', 'Enhanced Search'],
   },
   {
-    id: 'ultra_monthly',
-    name: 'ULTRA',
-    price: '$24.99/mo',
-    color: 'from-violet-500 to-purple-600',
-    shadow: 'shadow-violet-200/50',
-    border: 'border-violet-200',
-    icon: Zap,
-    perks: [
-      'Verified Breeder badge & certificate',
-      'Photo album storage upgrades',
-      'Unlimited AI-generated bios',
-      'Priority in search results',
-      'First 3 puppy/kitten litter listings free',
-      '7-day free trial included',
-    ],
-    recommended: false,
+    id: 'ultra',
+    name: 'Ultra',
+    price: '$24.99/month',
+    color: 'from-amber-500 to-amber-600',
+    features: ['250 AI Bio Generations', 'Premium Bio Styles + Taglines', 'Create Video/Audio Content', 'Verified Breeder Badge', '1 Free Promotion/month'],
   },
   {
-    id: 'mega_monthly',
-    name: 'MEGA',
-    price: '$39.99/mo',
-    color: 'from-rose-500 to-red-600',
-    shadow: 'shadow-rose-200/50',
-    border: 'border-rose-200',
-    icon: Crown,
-    perks: [
-      'All ULTRA benefits',
-      'Pro Badge + customizable certificate',
-      'Pet popularity analytics',
-      'Leveling & benefits access',
-      'Surprise bonus package for your pet',
-      '7-day free trial included',
-    ],
-    recommended: false,
+    id: 'mega',
+    name: 'Mega',
+    price: '$39.99/month',
+    color: 'from-primary to-secondary',
+    features: ['Unlimited AI Generations', 'All Bio Styles + Origin Stories', 'Create & Share All Content', 'Premium Verified Badge', '3 Free Promotions/month', 'Bonus Points', 'VIP Event Access', 'Full Feature Access'],
   },
 ];
 
 export default function MembershipPage() {
-  const { user, authHeaders, API } = useAuth();
-  const [membership, setMembership] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [checkingOut, setCheckingOut] = useState('');
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await axios.get(`${API}/membership/status`, { headers: authHeaders() });
-        setMembership(res.data);
-      } catch (e) { console.error(e); }
-      setLoading(false);
-    };
-    fetchStatus();
-  }, [API, authHeaders]);
-
-  const handleSubscribe = async (planId) => {
-    setCheckingOut(planId);
-    try {
-      const res = await axios.post(`${API}/stripe/create-checkout`, {
-        plan_id: planId,
-        success_url: `${window.location.origin}/feed?payment=success`,
-        cancel_url: `${window.location.origin}/membership?payment=cancelled`,
-      }, { headers: authHeaders() });
-      window.location.href = res.data.checkout_url;
-    } catch (e) {
-      toast.error(e.response?.data?.detail || 'Checkout failed');
-      setCheckingOut('');
-    }
-  };
-
-  const currentTier = membership?.tier || 'free';
+  const { user } = useAuth();
+  const currentTier = user?.membership_tier || 'free';
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5]">
-      <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold font-['Archivo_Narrow'] text-gray-900">
-            Petbookin Membership
+    <AppLayout>
+      <div className="max-w-5xl mx-auto space-y-8" data-testid="membership-page">
+        <div className="text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: 'Outfit' }}>
+            Upgrade Your <span className="text-primary">Petbookin</span> Experience
           </h1>
-          <p className="text-base text-gray-500 mt-2 max-w-lg mx-auto">
-            Unlock premium features for your pet's profile. All plans include a 7-day free trial.
+          <p className="text-muted-foreground mt-3 max-w-lg mx-auto">
+            Unlock AI-powered bios, video creation, promotions, and exclusive breeder features.
           </p>
-          {currentTier !== 'free' && (
-            <Badge className="mt-3 bg-gradient-to-r from-amber-400 to-rose-500 text-white border-0 text-sm px-3 py-1">
-              Current Plan: {currentTier}
-            </Badge>
-          )}
         </div>
 
-        {/* Pet Owner vs Breeder note */}
-        {membership?.account_type === 'pet_owner' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-center">
-            <p className="text-sm text-amber-800">
-              <PawPrint className="w-4 h-4 inline mr-1" />
-              As a <strong>Pet Owner</strong>, you can subscribe to <strong>PRIME</strong> or start as a <strong>Hobbyist</strong> — your listing auto-levels to PRO after 2 weeks!
-            </p>
-          </div>
-        )}
+        {/* Current tier */}
+        <div className="text-center">
+          <Badge className="text-sm px-4 py-1">
+            Current Plan: <span className="font-bold ml-1 uppercase">{currentTier}</span>
+          </Badge>
+        </div>
 
-        {/* Tier Cards */}
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full" />
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {TIERS.map(tier => (
+        {/* Tier cards */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {tiers.map((tier) => {
+            const isActive = currentTier === tier.id;
+            return (
               <div
                 key={tier.id}
-                className={`bg-white rounded-2xl border ${tier.border} shadow-lg ${tier.shadow} overflow-hidden flex flex-col ${
-                  tier.recommended ? 'ring-2 ring-blue-400 relative' : ''
-                } hover:-translate-y-1 transition-transform duration-300`}
-                data-testid={`tier-card-${tier.name.toLowerCase()}`}
+                className={`relative rounded-2xl border bg-card p-6 transition-all hover:shadow-lg ${
+                  tier.popular ? 'border-primary shadow-md' : 'border-border'
+                } ${isActive ? 'ring-2 ring-primary' : ''}`}
+                data-testid={`tier-${tier.id}`}
               >
-                {tier.recommended && (
-                  <div className="bg-blue-500 text-white text-xs font-bold text-center py-1">
-                    MOST POPULAR
+                {tier.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-primary text-white text-[10px] px-3">Most Popular</Badge>
                   </div>
                 )}
-                <div className="p-5 flex-1 flex flex-col">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center text-white shadow-md mb-3`}>
-                    <tier.icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 font-['Archivo_Narrow']">{tier.name}</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{tier.price}</p>
-                  <p className="text-xs text-gray-400 mb-4">7-day free trial</p>
-                  <ul className="space-y-2 flex-1">
-                    {tier.perks.map((perk, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                        <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                        {perk}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    data-testid={`subscribe-${tier.name.toLowerCase()}`}
-                    onClick={() => handleSubscribe(tier.id)}
-                    disabled={checkingOut === tier.id || currentTier === tier.name}
-                    className={`w-full mt-4 h-10 bg-gradient-to-r ${tier.color} hover:opacity-90 text-white font-semibold rounded-xl shadow-md transition-all active:scale-95`}
-                  >
-                    {checkingOut === tier.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : currentTier === tier.name ? (
-                      'Current Plan'
-                    ) : (
-                      'Start Free Trial'
-                    )}
-                  </Button>
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${tier.color} flex items-center justify-center mb-4`}>
+                  <Crown className="w-6 h-6 text-white" />
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+                <h3 className="text-xl font-bold" style={{ fontFamily: 'Outfit' }}>{tier.name}</h3>
+                <p className="text-2xl font-bold mt-2" style={{ fontFamily: 'Outfit' }}>{tier.price}</p>
 
-        {/* Yearly Plans */}
-        <div className="mt-10 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 font-['Archivo_Narrow'] mb-4">
-            <Sparkles className="w-5 h-5 inline text-amber-500 mr-1" /> Yearly Plans — Save More
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="border border-blue-200 rounded-xl p-4 bg-blue-50/50">
-              <h3 className="text-base font-semibold text-gray-900">PRO Yearly</h3>
-              <p className="text-xl font-bold text-gray-900">$305.88<span className="text-sm font-normal text-gray-500">/year</span></p>
-              <p className="text-xs text-blue-600 font-medium">That's just $25.49/mo — 36.25% savings!</p>
-              <Button
-                data-testid="subscribe-pro-yearly"
-                onClick={() => handleSubscribe('pro_yearly')}
-                disabled={checkingOut === 'pro_yearly'}
-                className="mt-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
-              >
-                {checkingOut === 'pro_yearly' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Subscribe Yearly'}
-              </Button>
-            </div>
-            <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
-              <h3 className="text-base font-semibold text-gray-900">Promote a Listing</h3>
-              <p className="text-xl font-bold text-gray-900">$3.49<span className="text-sm font-normal text-gray-500">/week</span></p>
-              <p className="text-xs text-gray-500">Feature up to 2 pets/litters in search results</p>
-              <Button
-                data-testid="promote-listing-btn"
-                onClick={() => handleSubscribe('promote_listing')}
-                disabled={checkingOut === 'promote_listing'}
-                variant="outline"
-                className="mt-3 border-gray-300 rounded-xl"
-              >
-                {checkingOut === 'promote_listing' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Promote Now'}
-              </Button>
-            </div>
-          </div>
+                <ul className="mt-6 space-y-3">
+                  {tier.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm">
+                      <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  className={`w-full mt-6 py-2.5 rounded-full font-medium text-sm transition-all ${
+                    isActive
+                      ? 'bg-muted text-muted-foreground cursor-default'
+                      : `bg-gradient-to-r ${tier.color} text-white hover:opacity-90 hover:-translate-y-0.5`
+                  }`}
+                  disabled={isActive}
+                  data-testid={`subscribe-${tier.id}`}
+                >
+                  {isActive ? 'Current Plan' : 'Subscribe'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* A la carte */}
+        <div className="rounded-2xl border border-border bg-card p-8 text-center" data-testid="ala-carte-section">
+          <Sparkles className="w-8 h-8 text-secondary mx-auto mb-3" />
+          <h2 className="text-xl font-bold mb-2" style={{ fontFamily: 'Outfit' }}>A La Carte Purchases</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+            Don't want a full subscription? Purchase individual features like extra AI generations or post promotions.
+          </p>
+          <Badge variant="outline" className="text-sm">Coming with Stripe integration</Badge>
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

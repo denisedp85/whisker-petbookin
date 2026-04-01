@@ -1,277 +1,254 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import Navbar from '../components/Navbar';
-import CreatePost from '../components/CreatePost';
-import PostCard from '../components/PostCard';
+import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
-import { PawPrint, Users, UserPlus, Camera, Heart, Shield } from 'lucide-react';
+import { Textarea } from '../components/ui/textarea';
+import { Badge } from '../components/ui/badge';
+import { Heart, MessageCircle, Send, Trash2, Shield } from 'lucide-react';
+import { toast } from 'sonner';
 import axios from 'axios';
 
 export default function FeedPage() {
-  const { user, pets, activePet, authHeaders, API } = useAuth();
+  const { user, pets, authHeaders, API } = useAuth();
   const [posts, setPosts] = useState([]);
+  const [newPost, setNewPost] = useState('');
+  const [selectedPet, setSelectedPet] = useState('');
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [pendingRequests, setPendingRequests] = useState([]);
+  const [posting, setPosting] = useState(false);
+  const [commentTexts, setCommentTexts] = useState({});
+  const [comments, setComments] = useState({});
+  const [showComments, setShowComments] = useState({});
 
-  const fetchFeed = useCallback(async () => {
+  const fetchPosts = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/posts/feed?page=${page}`, { headers: authHeaders() });
-      if (page === 1) {
-        setPosts(res.data);
-      } else {
-        setPosts(prev => [...prev, ...res.data]);
-      }
+      const res = await axios.get(`${API}/feed/posts`, { headers: authHeaders() });
+      setPosts(res.data.posts || []);
     } catch (e) {
-      console.error('Feed fetch failed', e);
+      console.error('Failed to load feed', e);
     }
     setLoading(false);
-  }, [page, API, authHeaders]);
-
-  const fetchPendingRequests = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API}/friends/requests/pending`, { headers: authHeaders() });
-      setPendingRequests(res.data);
-    } catch (e) {
-      console.error('Failed to fetch pending requests', e);
-    }
   }, [API, authHeaders]);
 
-  useEffect(() => {
-    fetchFeed();
-    fetchPendingRequests();
-  }, [fetchFeed, fetchPendingRequests]);
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
-  const handlePostCreated = (newPost) => {
-    setPosts(prev => [newPost, ...prev]);
+  const handlePost = async () => {
+    if (!newPost.trim()) return;
+    setPosting(true);
+    try {
+      await axios.post(`${API}/feed/posts`, {
+        content: newPost,
+        pet_id: selectedPet || undefined
+      }, { headers: authHeaders() });
+      setNewPost('');
+      setSelectedPet('');
+      fetchPosts();
+      toast.success('Post shared!');
+    } catch (e) {
+      toast.error('Failed to post');
+    }
+    setPosting(false);
   };
 
-  const handlePostDeleted = (postId) => {
-    setPosts(prev => prev.filter(p => p.post_id !== postId));
+  const handleLike = async (postId) => {
+    try {
+      const res = await axios.post(`${API}/feed/posts/${postId}/like`, {}, { headers: authHeaders() });
+      setPosts(prev => prev.map(p => {
+        if (p.post_id !== postId) return p;
+        const likes = p.likes || [];
+        return {
+          ...p,
+          likes: res.data.liked ? [...likes, user.user_id] : likes.filter(id => id !== user.user_id),
+          likes_count: (p.likes_count || 0) + (res.data.liked ? 1 : -1)
+        };
+      }));
+    } catch {}
+  };
+
+  const loadComments = async (postId) => {
+    try {
+      const res = await axios.get(`${API}/feed/posts/${postId}/comments`, { headers: authHeaders() });
+      setComments(prev => ({ ...prev, [postId]: res.data }));
+    } catch {}
+  };
+
+  const toggleComments = (postId) => {
+    const isShowing = showComments[postId];
+    setShowComments(prev => ({ ...prev, [postId]: !isShowing }));
+    if (!isShowing && !comments[postId]) loadComments(postId);
+  };
+
+  const handleComment = async (postId) => {
+    const text = commentTexts[postId]?.trim();
+    if (!text) return;
+    try {
+      await axios.post(`${API}/feed/posts/${postId}/comments`, { content: text }, { headers: authHeaders() });
+      setCommentTexts(prev => ({ ...prev, [postId]: '' }));
+      loadComments(postId);
+      setPosts(prev => prev.map(p => p.post_id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p));
+    } catch {}
+  };
+
+  const handleDelete = async (postId) => {
+    try {
+      await axios.delete(`${API}/feed/posts/${postId}`, { headers: authHeaders() });
+      setPosts(prev => prev.filter(p => p.post_id !== postId));
+      toast.success('Post deleted');
+    } catch {}
+  };
+
+  const timeAgo = (dateStr) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5]">
-      <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Left Sidebar */}
-          <div className="hidden md:block md:col-span-3 space-y-4">
-            {/* My Profile Card */}
-            {activePet && (
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm" data-testid="sidebar-profile">
-                <div className="p-4">
-                  <Link to={`/profile/${activePet.pet_id}`} className="flex items-center gap-3 hover:opacity-90">
-                    <div className="w-12 h-12 rounded-md bg-[#4080ff]/10 flex items-center justify-center border border-gray-200">
-                      <PawPrint className="w-6 h-6 text-[#4080ff]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#050505]">{activePet.name}</p>
-                      <p className="text-xs text-[#65676b]">{activePet.breed || activePet.species}</p>
-                    </div>
-                  </Link>
-                  <div className="grid grid-cols-2 gap-2 text-sm border-t border-gray-100 pt-3 mt-3">
-                    <div>
-                      <p className="text-[#65676b] text-xs uppercase tracking-wider">Friends</p>
-                      <p className="font-medium text-[#050505]">{activePet.friends_count || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#65676b] text-xs uppercase tracking-wider">Posts</p>
-                      <p className="font-medium text-[#050505]">{activePet.posts_count || 0}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+    <AppLayout>
+      <div className="max-w-2xl mx-auto space-y-6" data-testid="feed-page">
+        <h1 className="text-2xl font-bold" style={{ fontFamily: 'Outfit' }}>Feed</h1>
 
-            {/* Quick Links */}
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="border-b border-gray-100 p-3 bg-gray-50/50 rounded-t-lg">
-                <h3 className="text-xs font-semibold text-[#65676b] uppercase tracking-wider">Quick Links</h3>
-              </div>
-              <div className="p-2">
-                <Link to="/feed" className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 text-sm text-[#050505]" data-testid="sidebar-feed-link">
-                  <Heart className="w-4 h-4 text-[#4080ff]" /> News Feed
-                </Link>
-                <Link to="/friends" className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 text-sm text-[#050505]" data-testid="sidebar-friends-link">
-                  <Users className="w-4 h-4 text-[#4080ff]" /> Friends
-                </Link>
-                <Link to="/search" className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 text-sm text-[#050505]" data-testid="sidebar-search-link">
-                  <Camera className="w-4 h-4 text-[#4080ff]" /> Explore Pets
-                </Link>
-              </div>
+        {/* Create Post */}
+        <div className="rounded-2xl border border-border bg-card p-6" data-testid="create-post">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 overflow-hidden">
+              {user?.picture ? <img src={user.picture} alt="" className="w-full h-full object-cover" /> : user?.name?.charAt(0)}
             </div>
-
-            {/* Owner info */}
-            {user && (
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                <div className="border-b border-gray-100 p-3 bg-gray-50/50 rounded-t-lg">
-                  <h3 className="text-xs font-semibold text-[#65676b] uppercase tracking-wider">Owner / Breeder</h3>
-                </div>
-                <div className="p-3 space-y-2">
-                  <p className="text-sm font-medium text-[#050505]">{user.name}</p>
-                  {user.owner_bio && <p className="text-xs text-[#65676b]">{user.owner_bio}</p>}
-                  {user.kennel_club && (
-                    <div className="flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-md px-2 py-1 text-xs">
-                      <Shield className="w-3 h-3" />
-                      {user.kennel_club} {user.kennel_registration && `- ${user.kennel_registration}`}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Main Feed */}
-          <div className="col-span-1 md:col-span-6 space-y-4" data-testid="main-feed">
-            {/* Setup prompt for new users */}
-            {pets.length === 0 && (
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 text-center">
-                <PawPrint className="w-12 h-12 text-[#4080ff] mx-auto mb-3" />
-                <h2 className="text-lg font-semibold text-[#050505] font-['Archivo_Narrow']">Welcome to Petbookin!</h2>
-                <p className="text-sm text-[#65676b] mt-1 mb-4">Create your first pet profile to start posting and connecting.</p>
-                <Link to="/settings">
-                  <Button className="bg-[#4080ff] hover:bg-[#3b5998] text-white" data-testid="create-first-pet-btn">
-                    <PawPrint className="w-4 h-4 mr-2" /> Create Pet Profile
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {pets.length > 0 && <CreatePost onPostCreated={handlePostCreated} />}
-
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin w-8 h-8 border-4 border-[#4080ff] border-t-transparent rounded-full" />
-              </div>
-            ) : posts.length === 0 ? (
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 text-center">
-                <Camera className="w-10 h-10 text-[#bcc0c4] mx-auto mb-3" />
-                <h3 className="text-base font-semibold text-[#050505]">No posts yet</h3>
-                <p className="text-sm text-[#65676b] mt-1">Start by creating a post or finding friends!</p>
-              </div>
-            ) : (
-              posts.map(post => (
-                <PostCard key={post.post_id} post={post} onDelete={handlePostDeleted} />
-              ))
-            )}
-
-            {posts.length >= 20 && (
-              <div className="text-center py-4">
+            <div className="flex-1 space-y-3">
+              <Textarea
+                placeholder="What's your pet up to?"
+                value={newPost}
+                onChange={(e) => setNewPost(e.target.value)}
+                className="rounded-xl border-border resize-none min-h-[80px]"
+                data-testid="post-content-input"
+              />
+              <div className="flex items-center justify-between">
+                {pets.length > 0 && (
+                  <select
+                    value={selectedPet}
+                    onChange={(e) => setSelectedPet(e.target.value)}
+                    className="text-sm border border-border rounded-xl px-3 py-1.5 bg-background"
+                    data-testid="post-pet-select"
+                  >
+                    <option value="">No pet tag</option>
+                    {pets.map(p => <option key={p.pet_id} value={p.pet_id}>{p.name}</option>)}
+                  </select>
+                )}
                 <Button
-                  data-testid="load-more-btn"
-                  variant="outline"
-                  onClick={() => setPage(p => p + 1)}
-                  className="border-gray-300 text-[#65676b]"
+                  onClick={handlePost}
+                  disabled={!newPost.trim() || posting}
+                  className="rounded-full bg-primary text-white hover:bg-primary/90 ml-auto"
+                  data-testid="post-submit-btn"
                 >
-                  Load More
+                  {posting ? 'Posting...' : 'Post'}
                 </Button>
               </div>
-            )}
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="hidden lg:block lg:col-span-3 space-y-4">
-            {/* Friend Requests */}
-            {pendingRequests.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm" data-testid="pending-requests">
-                <div className="border-b border-gray-100 p-3 bg-gray-50/50 rounded-t-lg">
-                  <h3 className="text-xs font-semibold text-[#65676b] uppercase tracking-wider">
-                    Friend Requests ({pendingRequests.length})
-                  </h3>
-                </div>
-                <div className="p-2 space-y-2">
-                  {pendingRequests.slice(0, 5).map(req => (
-                    <FriendRequestCard key={req.friendship_id} request={req} onResponded={fetchPendingRequests} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Suggested - My Other Pets */}
-            {pets.length > 1 && (
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                <div className="border-b border-gray-100 p-3 bg-gray-50/50 rounded-t-lg">
-                  <h3 className="text-xs font-semibold text-[#65676b] uppercase tracking-wider">My Pets</h3>
-                </div>
-                <div className="p-2">
-                  {pets.map(pet => (
-                    <Link key={pet.pet_id} to={`/profile/${pet.pet_id}`} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50">
-                      <div className="w-8 h-8 rounded-md bg-[#4080ff]/10 flex items-center justify-center border border-gray-200">
-                        <PawPrint className="w-4 h-4 text-[#4080ff]" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[#050505]">{pet.name}</p>
-                        <p className="text-xs text-[#65676b]">{pet.breed}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Footer */}
-            <div className="text-xs text-[#bcc0c4] px-2 space-y-1">
-              <p>Petbookin &middot; The Pet Social Network</p>
-              <p>Connect your pets with the world</p>
             </div>
           </div>
         </div>
+
+        {/* Posts */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto" />
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground" data-testid="empty-feed">
+            <p className="text-lg font-medium">No posts yet</p>
+            <p className="text-sm mt-1">Be the first to share something!</p>
+          </div>
+        ) : (
+          posts.map((post) => (
+            <div key={post.post_id} className="rounded-2xl border border-border bg-card p-6 animate-fade-in-up" data-testid={`post-${post.post_id}`}>
+              {/* Post header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden">
+                  {post.author_picture ? <img src={post.author_picture} alt="" className="w-full h-full object-cover" /> : post.author_name?.charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">{post.author_name}</span>
+                    {post.author_tier && post.author_tier !== 'free' && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{post.author_tier.toUpperCase()}</Badge>
+                    )}
+                    {post.pet_name && (
+                      <span className="text-xs text-muted-foreground">with {post.pet_name}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{timeAgo(post.created_at)}</p>
+                </div>
+                {(post.author_id === user?.user_id || user?.is_admin) && (
+                  <button onClick={() => handleDelete(post.post_id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" data-testid={`delete-post-${post.post_id}`}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Content */}
+              <p className="text-sm leading-relaxed mb-4 whitespace-pre-wrap">{post.content}</p>
+
+              {/* Actions */}
+              <div className="flex items-center gap-4 pt-3 border-t border-border">
+                <button
+                  onClick={() => handleLike(post.post_id)}
+                  className={`flex items-center gap-1.5 text-sm transition-colors ${
+                    post.likes?.includes(user?.user_id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                  data-testid={`like-btn-${post.post_id}`}
+                >
+                  <Heart className={`w-4 h-4 ${post.likes?.includes(user?.user_id) ? 'fill-current' : ''}`} />
+                  <span>{post.likes_count || 0}</span>
+                </button>
+                <button
+                  onClick={() => toggleComments(post.post_id)}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid={`comment-btn-${post.post_id}`}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{post.comments_count || 0}</span>
+                </button>
+              </div>
+
+              {/* Comments */}
+              {showComments[post.post_id] && (
+                <div className="mt-4 pt-4 border-t border-border space-y-3">
+                  {(comments[post.post_id] || []).map((c) => (
+                    <div key={c.comment_id} className="flex gap-2">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold flex-shrink-0 overflow-hidden">
+                        {c.author_picture ? <img src={c.author_picture} alt="" className="w-full h-full object-cover" /> : c.author_name?.charAt(0)}
+                      </div>
+                      <div className="bg-muted/50 rounded-xl px-3 py-2 text-sm">
+                        <span className="font-medium text-xs">{c.author_name}</span>
+                        <p className="text-foreground/80">{c.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Write a comment..."
+                      value={commentTexts[post.post_id] || ''}
+                      onChange={(e) => setCommentTexts(prev => ({ ...prev, [post.post_id]: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && handleComment(post.post_id)}
+                      className="flex-1 text-sm border border-border rounded-xl px-3 py-2 bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      data-testid={`comment-input-${post.post_id}`}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleComment(post.post_id)}
+                      className="rounded-xl bg-primary text-white hover:bg-primary/90"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
-    </div>
-  );
-}
-
-function FriendRequestCard({ request, onResponded }) {
-  const { authHeaders, API } = useAuth();
-  const [responding, setResponding] = useState(false);
-
-  const respond = async (action) => {
-    setResponding(true);
-    try {
-      await axios.post(`${API}/friends/respond`, {
-        friendship_id: request.friendship_id,
-        action
-      }, { headers: authHeaders() });
-      if (onResponded) onResponded();
-    } catch (e) {
-      console.error('Respond failed', e);
-    }
-    setResponding(false);
-  };
-
-  const pet = request.requester_pet;
-  return (
-    <div className="flex items-center gap-2 p-2 rounded-md" data-testid={`friend-request-${request.friendship_id}`}>
-      <Link to={`/profile/${pet?.pet_id}`}>
-        <div className="w-10 h-10 rounded-md bg-[#4080ff]/10 flex items-center justify-center border border-gray-200">
-          <PawPrint className="w-5 h-5 text-[#4080ff]" />
-        </div>
-      </Link>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#050505] truncate">{pet?.name}</p>
-        <p className="text-xs text-[#65676b]">{pet?.breed}</p>
-        <div className="flex gap-1 mt-1">
-          <Button
-            data-testid={`accept-request-${request.friendship_id}`}
-            onClick={() => respond('accept')}
-            disabled={responding}
-            className="h-6 px-2 text-xs bg-[#4080ff] hover:bg-[#3b5998] text-white"
-          >
-            Confirm
-          </Button>
-          <Button
-            data-testid={`reject-request-${request.friendship_id}`}
-            onClick={() => respond('reject')}
-            disabled={responding}
-            variant="outline"
-            className="h-6 px-2 text-xs border-gray-300"
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
-    </div>
+    </AppLayout>
   );
 }

@@ -8,7 +8,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('pawbook_token'));
+  const [token, setToken] = useState(localStorage.getItem('petbookin_token'));
   const [loading, setLoading] = useState(true);
   const [pets, setPets] = useState([]);
   const [activePet, setActivePet] = useState(null);
@@ -27,7 +27,7 @@ export function AuthProvider({ children }) {
       });
       setUser(res.data);
     } catch {
-      localStorage.removeItem('pawbook_token');
+      localStorage.removeItem('petbookin_token');
       setToken(null);
       setUser(null);
     }
@@ -50,6 +50,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // CRITICAL: If returning from OAuth callback, skip the /me check.
     // AuthCallback will exchange the session_id and establish the session first.
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     if (window.location.hash?.includes('session_id=')) {
       setLoading(false);
       return;
@@ -63,18 +64,18 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await axios.post(`${API}/auth/login`, { email, password });
-    const { token: newToken, user: userData } = res.data;
-    localStorage.setItem('pawbook_token', newToken);
-    setToken(newToken);
+    const { token: newToken, session_token, user: userData } = res.data;
+    localStorage.setItem('petbookin_token', session_token || newToken);
+    setToken(session_token || newToken);
     setUser(userData);
     return userData;
   };
 
   const register = async (data) => {
     const res = await axios.post(`${API}/auth/register`, data);
-    const { token: newToken, user: userData } = res.data;
-    localStorage.setItem('pawbook_token', newToken);
-    setToken(newToken);
+    const { token: newToken, session_token, user: userData } = res.data;
+    localStorage.setItem('petbookin_token', session_token || newToken);
+    setToken(session_token || newToken);
     setUser(userData);
     return userData;
   };
@@ -87,9 +88,9 @@ export function AuthProvider({ children }) {
 
   const processGoogleSession = async (sessionId) => {
     const res = await axios.post(`${API}/auth/google-session`, { session_id: sessionId }, { withCredentials: true });
-    const { token: newToken, user: userData } = res.data;
-    localStorage.setItem('pawbook_token', newToken);
-    setToken(newToken);
+    const { token: newToken, session_token, user: userData } = res.data;
+    localStorage.setItem('petbookin_token', session_token || newToken);
+    setToken(session_token || newToken);
     setUser(userData);
     return userData;
   };
@@ -98,7 +99,7 @@ export function AuthProvider({ children }) {
     try {
       await axios.post(`${API}/auth/logout`, {}, { withCredentials: true, headers: authHeaders() });
     } catch {}
-    localStorage.removeItem('pawbook_token');
+    localStorage.removeItem('petbookin_token');
     setToken(null);
     setUser(null);
     setPets([]);
@@ -111,11 +112,21 @@ export function AuthProvider({ children }) {
     return res.data;
   };
 
+  const refreshUser = async () => {
+    try {
+      const res = await axios.get(`${API}/auth/me`, {
+        headers: authHeaders(),
+        withCredentials: true
+      });
+      setUser(res.data);
+    } catch {}
+  };
+
   return (
     <AuthContext.Provider value={{
       user, token, loading, pets, activePet, setActivePet,
       login, register, loginWithGoogle, processGoogleSession, logout,
-      updateProfile, fetchPets, authHeaders, API
+      updateProfile, refreshUser, fetchPets, authHeaders, API
     }}>
       {children}
     </AuthContext.Provider>
