@@ -98,10 +98,14 @@ export default function MyPetsPage() {
                   <option value="dog">Dog</option>
                   <option value="cat">Cat</option>
                   <option value="bird">Bird</option>
+                  <option value="horse">Horse</option>
+                  <option value="rabbit">Rabbit</option>
                   <option value="fish">Fish</option>
                   <option value="reptile">Reptile</option>
-                  <option value="rabbit">Rabbit</option>
                   <option value="hamster">Hamster</option>
+                  <option value="ferret">Ferret</option>
+                  <option value="guinea_pig">Guinea Pig</option>
+                  <option value="exotic">Exotic</option>
                   <option value="other">Other</option>
                 </select>
                 <Input placeholder="Breed" value={form.breed} onChange={(e) => setForm({...form, breed: e.target.value})} className="rounded-xl" data-testid="pet-breed-input" />

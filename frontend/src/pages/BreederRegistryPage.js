@@ -8,7 +8,15 @@ import { Shield, Plus, Award, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const REGISTRIES = ['AKC', 'CKC', 'UKC', 'FCI', 'KC', 'ANKC', 'Other'];
+const REGISTRIES = [
+  'AKC', 'CKC', 'UKC', 'FCI', 'KC',       // Dogs
+  'TICA', 'CFA', 'GCCF', 'ACF',             // Cats
+  'AFA', 'ABS',                               // Birds
+  'AQHA', 'APHA', 'USEF',                    // Horses
+  'ARBA', 'BRC',                              // Rabbits
+  'USARK',                                    // Reptiles
+  'ANKC', 'Other'
+];
 
 export default function BreederRegistryPage() {
   const { user, authHeaders, API, refreshUser } = useAuth();

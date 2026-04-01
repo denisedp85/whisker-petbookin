@@ -2,12 +2,28 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AppLayout from '../components/layout/AppLayout';
 import PetbookinSeal from '../components/PetbookinSeal';
+import CertificateDocument from '../components/CertificateDocument';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { ScrollText, Plus, Send, FileCheck, ArrowRightLeft, PawPrint, Baby } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+
+const ALL_SPECIES = [
+  { value: 'dog', label: 'Dog' },
+  { value: 'cat', label: 'Cat' },
+  { value: 'bird', label: 'Bird' },
+  { value: 'horse', label: 'Horse' },
+  { value: 'rabbit', label: 'Rabbit' },
+  { value: 'reptile', label: 'Reptile' },
+  { value: 'fish', label: 'Fish' },
+  { value: 'hamster', label: 'Hamster' },
+  { value: 'ferret', label: 'Ferret' },
+  { value: 'guinea_pig', label: 'Guinea Pig' },
+  { value: 'exotic', label: 'Exotic' },
+  { value: 'other', label: 'Other' },
+];
 
 export default function CertificatesPage() {
   const { user, pets, authHeaders, API } = useAuth();
@@ -269,7 +285,7 @@ export default function CertificatesPage() {
                     <Input placeholder="Pet Name *" value={certForm.pet_name} onChange={(e) => setCertForm({...certForm, pet_name: e.target.value})} required className="rounded-xl" data-testid="cert-pet-name" />
                     <Input placeholder="Breed *" value={certForm.breed} onChange={(e) => setCertForm({...certForm, breed: e.target.value})} required className="rounded-xl" data-testid="cert-breed" />
                     <select value={certForm.species} onChange={(e) => setCertForm({...certForm, species: e.target.value})} className="border border-border rounded-xl px-4 py-2.5 bg-background text-sm" data-testid="cert-species">
-                      <option value="dog">Dog</option><option value="cat">Cat</option><option value="bird">Bird</option><option value="other">Other</option>
+                      {ALL_SPECIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                     <Input type="date" placeholder="Date of Birth" value={certForm.dob} onChange={(e) => setCertForm({...certForm, dob: e.target.value})} className="rounded-xl" data-testid="cert-dob" />
                     <select value={certForm.gender} onChange={(e) => setCertForm({...certForm, gender: e.target.value})} className="border border-border rounded-xl px-4 py-2.5 bg-background text-sm" data-testid="cert-gender">
@@ -319,7 +335,7 @@ export default function CertificatesPage() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Input placeholder="Breed *" value={litterForm.breed} onChange={(e) => setLitterForm({...litterForm, breed: e.target.value})} required className="rounded-xl" data-testid="litter-breed" />
                   <select value={litterForm.species} onChange={(e) => setLitterForm({...litterForm, species: e.target.value})} className="border border-border rounded-xl px-4 py-2.5 bg-background text-sm">
-                    <option value="dog">Dog</option><option value="cat">Cat</option><option value="other">Other</option>
+                    {ALL_SPECIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                   <Input type="date" placeholder="Whelp Date" value={litterForm.whelp_date} onChange={(e) => setLitterForm({...litterForm, whelp_date: e.target.value})} className="rounded-xl" data-testid="litter-whelp" />
                   <Input type="number" placeholder="Number of puppies" value={litterForm.puppy_count} onChange={(e) => setLitterForm({...litterForm, puppy_count: parseInt(e.target.value) || 0})} className="rounded-xl" data-testid="litter-count" />
@@ -364,87 +380,11 @@ export default function CertificatesPage() {
 
         {/* Certificate View */}
         {showCertView && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setShowCertView(null)}>
-            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto animate-fade-in-up" onClick={(e) => e.stopPropagation()} data-testid="cert-view-modal">
-              {/* Certificate Document */}
-              <div className="border-2 border-primary/20 rounded-2xl p-8 relative overflow-hidden">
-                {/* Watermark */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none">
-                  <PetbookinSeal size={400} />
-                </div>
-
-                {/* Header */}
-                <div className="text-center relative z-10 mb-6">
-                  <div className="flex justify-center mb-3">
-                    <PetbookinSeal size={80} />
-                  </div>
-                  <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Outfit' }}>Official Certificate of Registration</h2>
-                  <p className="text-xs text-muted-foreground tracking-[0.2em] uppercase mt-1">Petbookin Official Registry</p>
-                  <div className="w-32 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mt-3" />
-                </div>
-
-                {/* Certificate ID */}
-                <div className="text-center mb-6 relative z-10">
-                  <Badge className="bg-primary/10 text-primary text-sm px-4 py-1 font-mono">{showCertView.certificate_id}</Badge>
-                </div>
-
-                {/* Pet Info */}
-                <div className="grid sm:grid-cols-2 gap-x-8 gap-y-3 relative z-10 mb-6">
-                  {[
-                    ['Registered Name', showCertView.pet_info?.name],
-                    ['Breed', showCertView.pet_info?.breed],
-                    ['Species', showCertView.pet_info?.species],
-                    ['Date of Birth', showCertView.pet_info?.dob || 'N/A'],
-                    ['Gender', showCertView.pet_info?.gender || 'N/A'],
-                    ['Color/Markings', showCertView.pet_info?.color_markings || 'N/A'],
-                    ['Microchip', showCertView.pet_info?.microchip_id || 'N/A'],
-                    ['Kennel', showCertView.kennel_name || 'N/A'],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex justify-between py-1.5 border-b border-border/50">
-                      <span className="text-xs text-muted-foreground font-medium">{label}</span>
-                      <span className="text-sm font-medium text-right">{value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Pedigree */}
-                {(showCertView.pedigree?.sire?.name || showCertView.pedigree?.dam?.name) && (
-                  <div className="relative z-10 mb-6">
-                    <p className="text-xs font-bold tracking-wider uppercase text-muted-foreground mb-3">Pedigree</p>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="bg-muted/30 rounded-xl p-3">
-                        <p className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground mb-1">Sire (Father)</p>
-                        <p className="text-sm font-medium">{showCertView.pedigree.sire?.name || 'Unknown'}</p>
-                        {showCertView.pedigree.sire?.breed && <p className="text-xs text-muted-foreground">{showCertView.pedigree.sire.breed}</p>}
-                        {showCertView.pedigree.sire?.certificate_id && <Badge variant="outline" className="text-[9px] mt-1">{showCertView.pedigree.sire.certificate_id}</Badge>}
-                      </div>
-                      <div className="bg-muted/30 rounded-xl p-3">
-                        <p className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground mb-1">Dam (Mother)</p>
-                        <p className="text-sm font-medium">{showCertView.pedigree.dam?.name || 'Unknown'}</p>
-                        {showCertView.pedigree.dam?.breed && <p className="text-xs text-muted-foreground">{showCertView.pedigree.dam.breed}</p>}
-                        {showCertView.pedigree.dam?.certificate_id && <Badge variant="outline" className="text-[9px] mt-1">{showCertView.pedigree.dam.certificate_id}</Badge>}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div className="text-center relative z-10 pt-4 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground">Issued: {new Date(showCertView.issued_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                  <p className="text-xs text-muted-foreground">Breeder ID: {showCertView.breeder_pbk_id}</p>
-                  {showCertView.transfer_history?.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground mb-1">Transfer History</p>
-                      {showCertView.transfer_history.map((t, i) => (
-                        <p key={i} className="text-xs text-muted-foreground">{t.from_name} &rarr; {t.to_name} ({new Date(t.transferred_at).toLocaleDateString()})</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-4">
-                <Button variant="outline" onClick={() => setShowCertView(null)} className="rounded-full">Close</Button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowCertView(null)}>
+            <div className="w-full max-w-3xl max-h-[92vh] overflow-y-auto animate-fade-in-up" onClick={(e) => e.stopPropagation()} data-testid="cert-view-modal">
+              <CertificateDocument cert={showCertView} />
+              <div className="flex justify-center mt-4">
+                <Button variant="outline" onClick={() => setShowCertView(null)} className="rounded-full bg-white/90 backdrop-blur">Close</Button>
               </div>
             </div>
           </div>
