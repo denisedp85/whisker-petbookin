@@ -20,7 +20,7 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
 - Backend: FastAPI + Motor (Async MongoDB) + JWT Auth
 - Frontend: React + Tailwind CSS + Shadcn UI
 - Database: MongoDB (test_database)
-- Integrations: Emergent Google Auth, Emergent LLM (GPT-5.2 for AI bios)
+- Integrations: Emergent Google Auth, Emergent LLM (GPT-5.2 for AI bios), Stripe (subscriptions)
 - Object Storage: Emergent Object Storage for uploads
 
 ## What's Been Implemented (Phase 1) - April 1, 2026
@@ -64,6 +64,18 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
   - [x] Clickable place cards with phone, website, hours
   - [x] Auto-detect user location
 
+## What's Been Implemented (Phase 3) - April 1, 2026
+- [x] Stripe Subscription Integration (Sandbox):
+  - [x] POST /api/stripe/create-checkout-session - tier-specific checkout with fixed server-side pricing
+  - [x] GET /api/stripe/checkout-status/{session_id} - payment polling with auto tier upgrade
+  - [x] POST /api/webhook/stripe - webhook event handler for checkout.session.completed
+  - [x] GET /api/stripe/publishable-key - frontend key endpoint
+  - [x] payment_transactions collection tracking all payment activity
+  - [x] Frontend Membership page with Subscribe buttons, Stripe redirect, and payment polling
+  - [x] Tier pricing: Prime $4.99/week, Pro $14.99/month, Ultra $24.99/month, Mega $39.99/month
+  - [x] Prevents downgrades, shows current plan status
+  - [x] Duplicate payment protection (idempotent status updates)
+
 ## Admin Credentials
 - Email: admin@petbookin.com
 - Password: PetbookinAdmin2026!
@@ -71,33 +83,36 @@ Build "Petbookin" - A complete social network platform for pets. The platform se
 ## Remaining Backlog
 
 ### P0 - High Priority
-- Stripe integration for subscriptions (waiting for user's new Stripe keys)
 - A la carte purchases (extra AI gens, promotions)
 
 ### P1 - Medium Priority
-- Chat/Messaging system (real-time, pet-to-pet, group)
-- Marketplace (buy/sell pets, accessories, services - separate subscription)
 - TikTok-style video posts (tiered access - view for all, create for higher tiers)
 - Suno-style audio clips (tiered access)
-- Profile picture upload + avatar system + custom borders
+- MySpace-style profile customization enhancements (custom backgrounds, music/video backgrounds, avatar system, custom borders)
+- Role making system (admin assigns custom site roles and titles)
+- Micro-transactions (extra AI generations, post promotions)
+- Chat/Messaging system (real-time, pet-to-pet, group)
 
 ### P2 - Lower Priority
+- Marketplace (buy/sell pets, accessories, services - separate subscription)
 - Point system for pet owners
 - Mini-games (Pet Puzzle, Treat Catcher, Breed Quiz, Pet Show Champion)
 - Gaming section with separate subscription
-- VIP Features
+- VIP Features (tournaments, group gatherings)
 - Music/video background for profiles (MySpace-style)
 - Daily calendar check-ins
 
 ## DB Collections
-- users, pets, posts, comments, user_sessions, certificates, litters
+- users, pets, posts, comments, user_sessions, certificates, litters, payment_transactions
 
 ## Key API Endpoints
 - Auth: /api/auth/register, /api/auth/login, /api/auth/google-session, /api/auth/me, /api/auth/profile, /api/auth/theme, /api/auth/logout
 - Pets: /api/pets, /api/pets/mine, /api/pets/{id}, /api/pets/{id}/photo
-- Feed: /api/feed/posts, /api/feed/posts/{id}/like, /api/feed/posts/{id}/comments
+- Feed: /api/feed/posts, /api/feed/posts/{id}/like, /api/feed/posts/{id}/comments, /api/feed/pet-of-the-week
 - Breeder: /api/breeder/register, /api/breeder/credential/external, /api/breeder/credential/petbookin, /api/breeder/verify, /api/breeder/directory
 - Admin: /api/admin/stats, /api/admin/users, /api/admin/assign-role, /api/admin/assign-tier
 - AI: /api/ai/generate-bio, /api/ai/limits
 - Certificates: /api/certificates/register-pet, /api/certificates/register-litter, /api/certificates/transfer, /api/certificates/mine, /api/certificates/issued, /api/certificates/litters, /api/certificates/verify/{cert_id}, /api/certificates/fees
-- Feed Pet of Week: /api/feed/pet-of-the-week
+- Stripe: /api/stripe/create-checkout-session, /api/stripe/checkout-status/{session_id}, /api/stripe/publishable-key
+- Webhook: /api/webhook/stripe
+- Places: /api/places/search
