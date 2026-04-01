@@ -1,0 +1,170 @@
+<analysis>**original_problem_statement**: 
+The user initially lost their full-stack Petbookin application because a starter template was accidentally deployed over it. After restoring the codebase from a ZIP file, the user requested fixes for missing admin access, missing Stripe payment flows, Google Auth failures, and requested an extensive list of new features including a Petbookin Breeder Registry, chat system, marketplace, video/audio uploads, and a UI redesign.
+
+**User's preferred language**: English (EN)
+INSTRUCT next agent to respond in the user's preferred language only.
+
+**what currently exists?** 
+A full-stack social network for pets (FastAPI backend, React frontend, MongoDB). It includes JWT-based email authentication, basic Stripe subscription checkout (Prime, Pro, Ultra, Mega), a newly added Breeder Registry system (which auto-generates official IDs and awards), and AI-generated pet bios.
+
+**Last working item**: 
+    - Last item agent was working: Troubleshooting Stripe Webhook failures and Google OAuth login redirects. The webhook was receiving 200 OK locally but failing to update the user's tier in the database. Google Auth was redirecting users back to the landing page.
+    - Status: IN PROGRESS
+    - Agent Testing Done: Y (Checked bash logs and verified backend endpoints)
+    - Which testing method agent to use? Both (Backend testing for webhook simulation via curl/python, Frontend testing via screenshot tool to fix the AI Write button white screen).
+    - User Testing Done: Y
+
+**All Pending/In progress Issue list**: 
+  - Issue 1: Stripe Webhook not updating user tier (P0)
+     - Attempted fixes: Fixed uppercase/lowercase tier naming bug ( to ), added webhook signature verification, updated webhook secret.
+     - Next debug checklist: Check   handler logic. Verify if the webhook secret in  matches the user's Stripe **TEST MODE** webhook secret. Ensure the  in the Stripe session metadata strictly matches the DB .
+     - Why fix this issue and what will be achieved with the fix? Fixes the core monetization loop so users automatically get upgraded to Prime/Pro upon successful payment.
+     - Status: IN PROGRESS
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? Backend
+     - Blocked on other issue: None
+
+  - Issue 2: Frontend AI Write button causing blank white screen (P1)
+     - Attempted fixes: Implemented backend tier limits for AI generations.
+     - Next debug checklist: Inspect the React component handling the AI Write click on the Feed page. Look for missing imports, undefined variables, or state errors causing a React crash. Implement Error Boundaries.
+     - Why fix this issue and what will be achieved with the fix? Restores the core AI bio generation feature.
+     - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend
+     - Blocked on other issue: None
+
+  - Issue 3: Google OAuth Login Redirecting to Landing Page (P1)
+     - Attempted fixes: None yet.
+     - Next debug checklist: Check  files;  and  were noticed to be empty. Validate the Google OAuth flow in React and the backend callback.
+     - Why fix this issue and what will be achieved with the fix? Restores social login functionality.
+     - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Both
+     - Blocked on other issue: User needs to provide Google Auth keys or Agent needs to integrate Emergent-managed Google Auth via .
+
+**In progress Task List**: 
+  - Task 1: Webhook Test Mode Integration
+     - Where to resume: Ask user to confirm they have created a Stripe Webhook strictly in TEST mode and provided that specific  secret for the .
+     - What will be achieved with this? Proper testing of subscriptions.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix? Backend
+     - Blocked on something: User confirmation of Test Mode Webhook Secret.
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - (P1) UI/Navigation Redesign: Move navigation to the left sidebar, change primary theme to coral and mustard mixed, make the dashboard slightly larger, implement enhanced search (breeds, breeders, pets, owners), and group/nest nav items for a cleaner look.
+    - (P1) Chat System: Real-time messaging, pet-to-pet conversations, and group chats.
+    - (P1) Marketplace: Section to buy/sell pets, accessories, services, with payment integration.
+    - (P1) Video & Audio Uploads: TikTok-style video posts and Suno-style audio hooks.
+    
+    Future Tasks:
+    - (P2) Point System for Pet Owners: Earn points through mini-games and daily calendar check-ins.
+    - (P2) Working Mini Games: Pet Puzzle, Treat Catcher, Breed Quiz, Pet Show Champion.
+    - (P2) VIP Features functionality.
+
+**Completed work in this session**
+- Restored Petbookin application codebase from user-provided ZIP file.
+- Added environment variables to .
+- Fixed JWT auth bug (mismatch between  and uid=0(root) gid=0(root) groups=0(root)).
+- Removed Made with Emergent watermark from frontend.
+- Built Petbookin Breeder Registry System: auto-generates official IDs (), added registry UI to Settings page, added events, tournaments, and certificate endpoints.
+- Implemented tier limits for AI generated bios in  (Free=0, Prime=10, Pro=50, Ultra=250, Mega=Unlimited).
+- Created manual backend script/endpoints to assign MEGA tiers and breeder IDs.
+
+**Earlier issues found/mentioned but not fixed**
+   Issue 1: 
+   - Debug checklist: Google OAuth keys missing in backend causing silent redirects.
+   - Why to solve this issue and what will be achieved with this? Restores user login capabilities.
+   - Should Test frontend/backend/both after fix: Both
+   - Is recurring issue? N
+
+   Issue 2:
+   - Debug checklist: AI Write button causing blank screen on frontend.
+   - Why to solve this issue and what will be achieved with this? Fixes fatal React crash and restores AI functionality.
+   - Should Test frontend/backend/both after fix: Frontend
+   - Is recurring issue? N
+
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: N/A (This is the first fork)
+  - Recurrence count: 0
+  - Status: NOT STARTED
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+Frontend: React, Tailwind CSS, React Router
+Backend: FastAPI, Motor (Async MongoDB), JWT Auth
+Database: MongoDB
+Integrations: Stripe Checkout, Stripe Webhooks, Emergent LLM for Bios
+
+**key DB schema**
+  - users: 
+  - pets: 
+
+**changes in tech stack**
+  - None
+
+**All files of reference** 
+- : Contains API endpoints, Stripe webhook logic, AI generation limits, and Breeder registry routes.
+- : Updated to display the new Breeder Registry ID.
+- : Previous agent's comprehensive summary for handoff.
+- : Stores admin credentials.
+
+**Areas that need refactoring**: 
+-  is getting excessively large (~1600+ lines); routing should ideally be split into separate files (e.g., auth, stripe, breeder, posts) for maintainability.
+- Frontend lacks Error Boundaries, causing entire page crashes (blank white screen) when child components (like AI Write) fail.
+
+**key api endpoints**
+- 
+- 
+- 
+- 
+
+**Critical Info for New Agent** 
+- The user is managing Stripe largely from their own dashboard. They created a webhook, but there was confusion between Stripe LIVE mode and TEST mode. Ensure the   matches the user's Stripe **TEST MODE** webhook exactly while testing.
+-  and  are empty in . If the user wants Google Auth fixed, call  for Emergent-managed Google social login.
+- DO NOT hardcode the backend URL. Always use  from the frontend .
+
+**documents and test reports created in this job** 
+  - /app/SESSION_SUMMARY.md
+  - /app/HOW_TO_DEPLOY.md
+  - /app/WEBHOOK_DEBUG_GUIDE.md
+  - /app/AI_LIMITS_AND_BREEDER_ID_FIXED.md
+  - /app/PETBOOKIN_BREEDER_REGISTRY.md
+
+**Last 10 User Messages and any pending HUMAN messages** 
+1. User noted the chat is long (110 messages) and decided to fork to resolve glitching issues. (COMPLETED - forked).
+2. User reported that trying to log in with a Google test account redirects to the landing page, but a different email works. (PENDING)
+3. User reported 55 event deliveries as failures in the Stripe Sandbox mode, noting 200 OK on checkout but failures on the webhook itself. (PENDING)
+4. User stated test mode orange banner shows nothing, sandbox mode testing shows the webhook failures. (PENDING)
+5. User noted that clicking AI Write on the feed takes them to a blank white screen. (PENDING)
+6. User reported that test mode stripe shows no events but sandbox mode shows 55 delivery attempts.
+7. User verified deployment succeeded and tested payment.
+8. User provided webhook secret .
+9. User asked about naming the destination in Stripe.
+10. User uploaded images of their Stripe webhook configuration.
+
+**Project Health Check:**
+Broken (Stripe webhook state mismatch, Google Auth failing, AI component causing React crash).
+
+**3rd Party Integrations** 
+- Stripe (Payments) — requires User API Key (Currently using User's Test keys)
+- Google OAuth (Auth) — requires User API Key / Emergent-managed OAuth
+- OpenAI GPT (AI Bios) — uses Emergent LLM Key
+
+**Testing status**
+  - Testing agent used after significant changes: NO
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: []
+  - Known regressions: [Frontend crashing on AI Write click]
+
+**Credentials to test flow:**
+Admin: 
+Password: 
+Stripe Test Card: 
+
+**What agent forgot to execute**
+- Did not fix the React component crash (AI Write leading to a white screen).
+- Did not configure or fix the Google OAuth empty credentials bug.
+- Did not implement the UI/Navigation layout redesign requested before the fork.</analysis>

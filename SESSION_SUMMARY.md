@@ -144,7 +144,7 @@ CORS_ORIGINS=*
 
 **Frontend (.env):**
 ```
-REACT_APP_BACKEND_URL=https://backend-build-3.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://pet-social-dev.preview.emergentagent.com
 WDS_SOCKET_PORT=443
 ENABLE_HEALTH_CHECK=false
 ```

@@ -1,0 +1,121 @@
+{
+  "theme": "LIGHT",
+  "archetype": "3 (Pastel & Soft) mixed with 1 (Organic & Earthy)",
+  "color_palette": {
+    "primary": { "hex": "#FF7A6A", "hsl": "hsl(7 100% 71%)", "description": "Soft Coral Pink" },
+    "primary_foreground": { "hex": "#FFFFFF", "hsl": "hsl(0 0% 100%)" },
+    "secondary": { "hex": "#F2B824", "hsl": "hsl(43 88% 55%)", "description": "Warm Mustard Yellow" },
+    "secondary_foreground": { "hex": "#1F1514", "hsl": "hsl(10 22% 10%)" },
+    "background": { "hex": "#FFFDF9", "hsl": "hsl(40 50% 99%)", "description": "Off-white with a hint of warmth" },
+    "foreground": { "hex": "#28211E", "hsl": "hsl(15 14% 14%)", "description": "Deep earthy charcoal for readable text" },
+    "card": { "hex": "#FFFFFF", "hsl": "hsl(0 0% 100%)" },
+    "card_foreground": { "hex": "#28211E", "hsl": "hsl(15 14% 14%)" },
+    "popover": { "hex": "#FFFFFF", "hsl": "hsl(0 0% 100%)" },
+    "muted": { "hex": "#F4EFEA", "hsl": "hsl(30 25% 94%)", "description": "Soft muted tone for inactive/disabled states" },
+    "muted_foreground": { "hex": "#8C7D76", "hsl": "hsl(20 10% 51%)" },
+    "border": { "hex": "#E8DFD8", "hsl": "hsl(25 25% 88%)", "description": "Warm structural border" },
+    "accent": { "hex": "#F4EFEA", "hsl": "hsl(30 25% 94%)" },
+    "destructive": { "hex": "#E04F4A", "hsl": "hsl(3 71% 58%)" },
+    "success": { "hex": "#5CB85C", "hsl": "hsl(120 40% 54%)" },
+    "warning": { "hex": "#E8A317", "hsl": "hsl(43 82% 50%)" }
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Outfit, sans-serif",
+      "body": "Figtree, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-bold",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl tracking-tight font-semibold",
+      "h4": "text-lg sm:text-xl font-semibold",
+      "body": "text-base leading-relaxed text-foreground/90",
+      "small": "text-sm text-muted-foreground",
+      "label": "text-xs font-semibold tracking-[0.1em] uppercase"
+    }
+  },
+  "layout_and_spacing": {
+    "dashboard_container": "max-w-[1400px] mx-auto w-full px-4 sm:px-6 lg:px-8",
+    "sidebar": "w-72 flex-shrink-0 hidden lg:block border-r border-border bg-card/50 backdrop-blur-sm",
+    "bento_grid": "grid grid-cols-1 md:grid-cols-12 gap-6",
+    "card_padding": "p-6 sm:p-8",
+    "spacing_scale": "Generous spacing. Use gap-6, gap-8, p-6, p-8. Elements should breathe.",
+    "profile_customization": "CSS Variables applied at the container level (.profile-container) for overriding bg, border, and text colors natively."
+  },
+  "components": {
+    "buttons": "rounded-full px-6 py-2.5 font-medium transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-[1px] active:translate-y-0",
+    "cards": "rounded-2xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow",
+    "inputs": "rounded-xl border border-border bg-background px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all",
+    "verified_badge": "inline-flex items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-bold px-2 py-0.5",
+    "nav_items": "flex items-center gap-3 px-4 py-3 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 transition-colors font-medium",
+    "icons_library": "lucide-react"
+  },
+  "animations": {
+    "hover": "transition-all duration-200 ease-in-out",
+    "page_load": "framer-motion with initial opacity-0 y-4, animate opacity-100 y-0, duration 0.4s",
+    "modal": "backdrop-blur-sm bg-black/40"
+  },
+  "image_urls": [
+    {
+      "url": "https://images.unsplash.com/photo-1758876569572-b0001ec5e111?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBkb2clMjBwb3J0cmFpdCUyMG91dGRvb3J8ZW58MHx8fHwxNzc1MDMwOTg3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Dog running in snow",
+      "category": "feed_post"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1772018541222-05a811300cb3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBkb2clMjBwb3J0cmFpdCUyMG91dGRvb3J8ZW58MHx8fHwxNzc1MDMwOTg3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Two rottweilers",
+      "category": "feed_post"
+    },
+    {
+      "url": "https://images.pexels.com/photos/13898221/pexels-photo-13898221.jpeg",
+      "description": "Golden Retriever red bandana",
+      "category": "hero_pet_profile"
+    },
+    {
+      "url": "https://images.pexels.com/photos/26612961/pexels-photo-26612961.jpeg",
+      "description": "Grey and white cat lounging on stool",
+      "category": "pet_profile"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1761203430362-7fa48ebbe54d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwyfHxwZXQlMjBicmVlZGVyJTIwd2l0aCUyMGRvZ3xlbnwwfHx8fDE3NzUwMzA5OTB8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Pomeranian puppies",
+      "category": "breeder_profile"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1590634332990-429523f79cb2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwxfHxwZXQlMjBicmVlZGVyJTIwd2l0aCUyMGRvZ3xlbnwwfHx8fDE3NzUwMzA5OTB8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Breeder dog",
+      "category": "breeder_registry"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1580524246213-b7c190627771?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwxfHxwcmVtaXVtJTIwcGV0JTIwY29sbGFyJTIwcHJvZHVjdCUyMHBob3RvZ3JhcGh5fGVufDB8fHx8MTc3NTAzMTAxMnww&ixlib=rb-4.1.0&q=85",
+      "description": "Dog wearing a red collar",
+      "category": "marketplace_product"
+    },
+    {
+      "url": "https://static.prod-images.emergentagent.com/jobs/e549655b-49a1-4984-9471-f11a568f7277/images/b6d533026aa0d2ff101dbdbf50e5be105335ce299feaaa5202ef04d642ec9083.png",
+      "description": "Cinematic coral pink and mustard gradient texture",
+      "category": "hero_background"
+    },
+    {
+      "url": "https://static.prod-images.emergentagent.com/jobs/e549655b-49a1-4984-9471-f11a568f7277/images/4c7992930550a9b3b487f03b0472a30819b5b5460a797791f2c8960870d70bc5.png",
+      "description": "Subtle abstract geometric pattern in mustard and coral",
+      "category": "myspace_theme_pattern"
+    }
+  ],
+  "accessibility": {
+    "contrast": "Ensure primary CTA button text is pure white. Links and primary text must meet WCAG AA.",
+    "reduced_motion": "Wrap main framer-motion variants with prefers-reduced-motion checks or use duration 0 if requested.",
+    "testing": "All interactive elements must have data-testid. e.g. data-testid='post-like-button'."
+  },
+  "instructions_to_main_agent": [
+    "Install Outfit and Figtree fonts via Google Fonts and update index.css to import them.",
+    "Implement left sidebar navigation with sections (Feeds, Market, Registry, Play, Hub) grouped visually.",
+    "For the MySpace-style profile customization, create a user settings tab that allows setting CSS variables (--profile-bg, --profile-card-bg, --profile-text) applied via inline style on a .profile-theme-wrapper div.",
+    "Replace Shadcn default radii with rounded-2xl for cards and rounded-xl for inputs to match the friendly 'pet' aesthetic while maintaining professionalism.",
+    "Make the dashboard slightly larger by using max-w-[1400px] instead of standard 1200px or full fluid width on desktop.",
+    "Build the Breeder Registry with clear 'Verified Breeder' Badges visually distinct from standard users.",
+    "Use the provided real/professional images for feed posts and breeder profile mockups; avoid generic avatar placeholders where possible.",
+    "Do not use transparent backgrounds for text-heavy areas over the hero backgrounds; use a glassmorphism (backdrop-blur-xl bg-white/70) card for readability."
+  ]
+}
