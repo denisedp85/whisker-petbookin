@@ -45,6 +45,8 @@ from routes.ai import router as ai_router
 from routes.search import router as search_router
 from routes.certificates import router as certificates_router
 from routes.places import router as places_router
+from routes.stripe import router as stripe_router
+from routes.webhook import router as webhook_router
 
 api_router.include_router(auth_router)
 api_router.include_router(pets_router)
@@ -55,6 +57,8 @@ api_router.include_router(ai_router)
 api_router.include_router(search_router)
 api_router.include_router(certificates_router)
 api_router.include_router(places_router)
+api_router.include_router(stripe_router)
+api_router.include_router(webhook_router)
 
 app.include_router(api_router)
 

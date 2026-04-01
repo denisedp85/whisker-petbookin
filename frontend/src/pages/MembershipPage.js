@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AppLayout from '../components/layout/AppLayout';
 import { Badge } from '../components/ui/badge';
-import { Crown, Check, Sparkles, Shield, Zap, Star } from 'lucide-react';
+import { Crown, Check, Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const tiers = [
   {
@@ -36,9 +37,86 @@ const tiers = [
   },
 ];
 
+const TIER_ORDER = ['free', 'prime', 'pro', 'ultra', 'mega'];
+
 export default function MembershipPage() {
-  const { user } = useAuth();
+  const { user, API, authHeaders, refreshUser } = useAuth();
   const currentTier = user?.membership_tier || 'free';
+  const [loadingTier, setLoadingTier] = useState(null);
+  const [pollingStatus, setPollingStatus] = useState(null);
+
+  const pollPaymentStatus = useCallback(async (sessionId, attempt = 0) => {
+    const maxAttempts = 8;
+    if (attempt >= maxAttempts) {
+      setPollingStatus(null);
+      toast.error('Payment verification timed out. If you were charged, your tier will update shortly.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/stripe/checkout-status/${sessionId}`, {
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+
+      if (data.payment_status === 'paid') {
+        setPollingStatus(null);
+        toast.success(`Upgraded to ${data.tier_name}!`);
+        await refreshUser();
+        // Clean URL
+        window.history.replaceState({}, '', '/membership');
+        return;
+      }
+
+      if (data.status === 'expired') {
+        setPollingStatus(null);
+        toast.error('Payment session expired. Please try again.');
+        window.history.replaceState({}, '', '/membership');
+        return;
+      }
+
+      // Keep polling
+      setPollingStatus(`Verifying payment... (attempt ${attempt + 1})`);
+      setTimeout(() => pollPaymentStatus(sessionId, attempt + 1), 2500);
+    } catch {
+      setPollingStatus(null);
+      toast.error('Error checking payment status.');
+    }
+  }, [API, authHeaders, refreshUser]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (sessionId) {
+      setPollingStatus('Verifying your payment...');
+      pollPaymentStatus(sessionId);
+    }
+  }, [pollPaymentStatus]);
+
+  const handleSubscribe = async (tierId) => {
+    setLoadingTier(tierId);
+    try {
+      const res = await fetch(`${API}/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier_id: tierId,
+          origin_url: window.location.origin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to create checkout session');
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      toast.error(err.message || 'Payment error');
+    } finally {
+      setLoadingTier(null);
+    }
+  };
+
+  const currentTierIndex = TIER_ORDER.indexOf(currentTier);
 
   return (
     <AppLayout>
@@ -54,15 +132,27 @@ export default function MembershipPage() {
 
         {/* Current tier */}
         <div className="text-center">
-          <Badge className="text-sm px-4 py-1">
+          <Badge className="text-sm px-4 py-1" data-testid="current-tier-badge">
             Current Plan: <span className="font-bold ml-1 uppercase">{currentTier}</span>
           </Badge>
         </div>
+
+        {/* Polling banner */}
+        {pollingStatus && (
+          <div className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-secondary/10 border border-secondary/30" data-testid="payment-polling-banner">
+            <Loader2 className="w-5 h-5 animate-spin text-secondary" />
+            <span className="font-medium text-sm">{pollingStatus}</span>
+          </div>
+        )}
 
         {/* Tier cards */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {tiers.map((tier) => {
             const isActive = currentTier === tier.id;
+            const tierIndex = TIER_ORDER.indexOf(tier.id);
+            const isDowngrade = tierIndex <= currentTierIndex && currentTier !== 'free';
+            const loading = loadingTier === tier.id;
+
             return (
               <div
                 key={tier.id}
@@ -92,15 +182,19 @@ export default function MembershipPage() {
                 </ul>
 
                 <button
-                  className={`w-full mt-6 py-2.5 rounded-full font-medium text-sm transition-all ${
+                  onClick={() => handleSubscribe(tier.id)}
+                  className={`w-full mt-6 py-2.5 rounded-full font-medium text-sm transition-all flex items-center justify-center gap-2 ${
                     isActive
                       ? 'bg-muted text-muted-foreground cursor-default'
-                      : `bg-gradient-to-r ${tier.color} text-white hover:opacity-90 hover:-translate-y-0.5`
+                      : isDowngrade
+                        ? 'bg-muted/60 text-muted-foreground cursor-not-allowed'
+                        : `bg-gradient-to-r ${tier.color} text-white hover:opacity-90 hover:-translate-y-0.5`
                   }`}
-                  disabled={isActive}
+                  disabled={isActive || isDowngrade || loading || !!pollingStatus}
                   data-testid={`subscribe-${tier.id}`}
                 >
-                  {isActive ? 'Current Plan' : 'Subscribe'}
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isActive ? 'Current Plan' : isDowngrade ? 'Current or Lower' : loading ? 'Redirecting...' : 'Subscribe'}
                 </button>
               </div>
             );
@@ -114,7 +208,7 @@ export default function MembershipPage() {
           <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
             Don't want a full subscription? Purchase individual features like extra AI generations or post promotions.
           </p>
-          <Badge variant="outline" className="text-sm">Coming with Stripe integration</Badge>
+          <Badge variant="outline" className="text-sm">Coming Soon</Badge>
         </div>
       </div>
     </AppLayout>
