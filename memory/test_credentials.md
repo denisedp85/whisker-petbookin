@@ -14,11 +14,13 @@
 - Role: owner (auto-upgraded on startup)
 - Tier: mega
 
+## Test Users (created during testing)
+- Email: testuser_profile@test.com / Test1234! (has a test pet)
+
 ## Stripe
 - Mode: TEST (sk_test_emergent) in preview
 - Live keys should be set in Deployment Secrets when deploying
 - Test Card: 4242 4242 4242 4242 (any exp, any CVC, any ZIP)
 
-## Note
-- All test users (freeuser@test.com, buyer@test.com) were deleted during cleanup
-- Google Auth uses Emergent-managed OAuth (no GOOGLE_CLIENT_ID/SECRET needed)
+## Google Auth
+- Uses Emergent-managed OAuth (no GOOGLE_CLIENT_ID/SECRET needed)
