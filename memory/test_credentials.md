@@ -5,11 +5,13 @@
 - Password: PetbookinAdmin2026!
 - Role: owner (admin)
 - Tier: mega
+- Points: 160+
 
 ## Free Test User
 - Email: freeuser@test.com
 - Password: Test1234!
 - Tier: free
+- Points: 5+
 
 ## Stripe Test Card
 - Card: 4242 4242 4242 4242
