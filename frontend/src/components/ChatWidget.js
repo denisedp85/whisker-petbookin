@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { MessageCircle, X, Send, Search, ChevronDown, Minus } from 'lucide-react';
+import { MessageCircle, X, Send, Search, ChevronDown, Minus, Users, Plus } from 'lucide-react';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -14,7 +14,12 @@ function timeAgo(dateStr) {
 }
 
 /* ─── Contact List Panel ─── */
-function ContactsPanel({ contacts, conversations, onSelectContact, searchQuery, setSearchQuery, onClose }) {
+function ContactsPanel({ contacts, conversations, groups, onSelectContact, onSelectGroup, onCreateGroup, searchQuery, setSearchQuery, onClose }) {
+  const [tab, setTab] = useState('direct');
+  const [showNewGroup, setShowNewGroup] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState([]);
+
   const filtered = contacts.filter(c =>
     c.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -24,7 +29,6 @@ function ContactsPanel({ contacts, conversations, onSelectContact, searchQuery, 
     if (c.other_user) convoMap[c.other_user.user_id] = c;
   });
 
-  // Sort: conversations with recent messages first, then alphabetical
   const sorted = [...filtered].sort((a, b) => {
     const ca = convoMap[a.user_id];
     const cb = convoMap[b.user_id];
@@ -38,14 +42,30 @@ function ContactsPanel({ contacts, conversations, onSelectContact, searchQuery, 
     return (a.name || '').localeCompare(b.name || '');
   });
 
+  const handleCreateGroup = () => {
+    if (!groupName.trim() || selectedMembers.length === 0) return;
+    onCreateGroup(groupName.trim(), selectedMembers);
+    setShowNewGroup(false);
+    setGroupName('');
+    setSelectedMembers([]);
+  };
+
+  const toggleMember = (uid) => {
+    setSelectedMembers(prev => prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]);
+  };
+
   return (
-    <div className="w-[280px] h-[420px] bg-card border border-border rounded-t-xl shadow-2xl flex flex-col overflow-hidden" data-testid="chat-contacts-panel">
-      {/* Header */}
+    <div className="w-[280px] h-[440px] bg-card border border-border rounded-t-xl shadow-2xl flex flex-col overflow-hidden" data-testid="chat-contacts-panel">
       <div className="flex items-center justify-between px-4 py-3 bg-[#28211E] text-white">
         <span className="text-sm font-semibold" style={{ fontFamily: 'Outfit' }}>Chat</span>
         <button onClick={onClose} className="hover:bg-white/10 p-1 rounded transition-colors" data-testid="close-contacts-btn">
           <ChevronDown className="w-4 h-4" />
         </button>
+      </div>
+      {/* Tabs */}
+      <div className="flex border-b border-border">
+        <button onClick={() => { setTab('direct'); setShowNewGroup(false); }} className={`flex-1 text-[11px] py-2 font-medium ${tab === 'direct' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} data-testid="chat-tab-direct">Direct</button>
+        <button onClick={() => { setTab('groups'); setShowNewGroup(false); }} className={`flex-1 text-[11px] py-2 font-medium ${tab === 'groups' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`} data-testid="chat-tab-groups">Groups</button>
       </div>
       {/* Search */}
       <div className="px-3 py-2 border-b border-border">
@@ -54,47 +74,120 @@ function ContactsPanel({ contacts, conversations, onSelectContact, searchQuery, 
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search people..."
+            placeholder={tab === 'direct' ? "Search people..." : "Search groups..."}
             className="bg-transparent text-xs outline-none flex-1 placeholder:text-muted-foreground"
             data-testid="chat-search-input"
           />
         </div>
       </div>
-      {/* Contact list */}
-      <div className="flex-1 overflow-y-auto">
-        {sorted.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-8">No contacts found</p>
-        ) : (
-          sorted.map(contact => {
-            const convo = convoMap[contact.user_id];
-            return (
+
+      {/* Direct messages */}
+      {tab === 'direct' && (
+        <div className="flex-1 overflow-y-auto">
+          {sorted.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-8">No contacts found</p>
+          ) : (
+            sorted.map(contact => {
+              const convo = convoMap[contact.user_id];
+              return (
+                <button
+                  key={contact.user_id}
+                  onClick={() => onSelectContact(contact)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/60 transition-colors text-left"
+                  data-testid={`contact-${contact.user_id}`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0 overflow-hidden">
+                    {contact.picture ? <img src={contact.picture} alt="" className="w-full h-full object-cover" /> : contact.name?.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{contact.name}</p>
+                    {convo?.last_message && (
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {convo.last_message.content?.substring(0, 30)}{convo.last_message.content?.length > 30 ? '...' : ''}
+                      </p>
+                    )}
+                  </div>
+                  {convo?.unread_count > 0 && (
+                    <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                      {convo.unread_count > 9 ? '9+' : convo.unread_count}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Groups tab */}
+      {tab === 'groups' && !showNewGroup && (
+        <div className="flex-1 overflow-y-auto">
+          <button onClick={() => setShowNewGroup(true)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/60 text-left border-b border-border" data-testid="new-group-btn">
+            <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center"><Plus className="w-4 h-4 text-secondary" /></div>
+            <span className="text-xs font-medium text-secondary">New Group Chat</span>
+          </button>
+          {(groups || []).length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">No groups yet</p>
+          ) : (
+            (groups || []).map(g => (
               <button
-                key={contact.user_id}
-                onClick={() => onSelectContact(contact)}
+                key={g.conversation_id}
+                onClick={() => onSelectGroup(g)}
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/60 transition-colors text-left"
-                data-testid={`contact-${contact.user_id}`}
+                data-testid={`group-${g.conversation_id}`}
               >
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0 overflow-hidden">
-                  {contact.picture ? <img src={contact.picture} alt="" className="w-full h-full object-cover" /> : contact.name?.charAt(0)}
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-[10px] font-bold flex-shrink-0">
+                  <Users className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{contact.name}</p>
-                  {convo?.last_message && (
-                    <p className="text-[10px] text-muted-foreground truncate">
-                      {convo.last_message.content?.substring(0, 30)}{convo.last_message.content?.length > 30 ? '...' : ''}
-                    </p>
-                  )}
+                  <p className="text-xs font-medium truncate">{g.group_name}</p>
+                  <p className="text-[10px] text-muted-foreground">{g.members?.length || 0} members</p>
                 </div>
-                {convo?.unread_count > 0 && (
+                {g.unread_count > 0 && (
                   <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                    {convo.unread_count > 9 ? '9+' : convo.unread_count}
+                    {g.unread_count}
                   </span>
                 )}
               </button>
-            );
-          })
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* New group form */}
+      {tab === 'groups' && showNewGroup && (
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          <input
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            placeholder="Group name..."
+            className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"
+            data-testid="group-name-input"
+          />
+          <p className="text-[10px] text-muted-foreground">Select members ({selectedMembers.length} selected):</p>
+          <div className="max-h-[200px] overflow-y-auto space-y-1">
+            {contacts.map(c => (
+              <button
+                key={c.user_id}
+                onClick={() => toggleMember(c.user_id)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs transition-colors ${
+                  selectedMembers.includes(c.user_id) ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
+                }`}
+              >
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-bold flex-shrink-0 overflow-hidden">
+                  {c.picture ? <img src={c.picture} alt="" className="w-full h-full object-cover" /> : c.name?.charAt(0)}
+                </div>
+                <span className="truncate">{c.name}</span>
+                {selectedMembers.includes(c.user_id) && <span className="ml-auto text-primary text-[10px]">&#10003;</span>}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setShowNewGroup(false)} className="flex-1 text-xs py-2 rounded-lg border border-border hover:bg-muted">Cancel</button>
+            <button onClick={handleCreateGroup} disabled={!groupName.trim() || !selectedMembers.length} className="flex-1 text-xs py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-40" data-testid="create-group-btn">Create</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -108,7 +201,11 @@ function ChatWindow({ conversation, currentUser, API, authHeaders, onClose, onMi
   const inputRef = useRef(null);
   const pollRef = useRef(null);
 
+  const isGroup = conversation.type === 'group';
   const other = conversation.other_user;
+  const displayName = isGroup ? conversation.group_name : other?.name;
+  const displayInitial = isGroup ? conversation.group_name?.charAt(0) : other?.name?.charAt(0);
+  const displayPicture = isGroup ? null : other?.picture;
   const convId = conversation.conversation_id;
 
   const fetchMessages = useCallback(async () => {
@@ -165,10 +262,10 @@ function ChatWindow({ conversation, currentUser, API, authHeaders, onClose, onMi
         className="h-10 bg-[#28211E] text-white rounded-t-lg px-4 flex items-center gap-2 hover:bg-[#3a332e] transition-colors shadow-lg min-w-[160px]"
         data-testid={`chat-minimized-${convId}`}
       >
-        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold flex-shrink-0 overflow-hidden">
-          {other?.picture ? <img src={other.picture} alt="" className="w-full h-full object-cover" /> : other?.name?.charAt(0)}
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 overflow-hidden ${isGroup ? 'bg-purple-500/20 text-purple-500' : 'bg-primary/20'}`}>
+          {displayPicture ? <img src={displayPicture} alt="" className="w-full h-full object-cover" /> : isGroup ? <Users className="w-3.5 h-3.5" /> : displayInitial}
         </div>
-        <span className="text-xs font-medium truncate">{other?.name}</span>
+        <span className="text-xs font-medium truncate">{displayName}</span>
       </button>
     );
   }
@@ -178,10 +275,10 @@ function ChatWindow({ conversation, currentUser, API, authHeaders, onClose, onMi
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-[#28211E] text-white flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold flex-shrink-0 overflow-hidden">
-            {other?.picture ? <img src={other.picture} alt="" className="w-full h-full object-cover" /> : other?.name?.charAt(0)}
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 overflow-hidden ${isGroup ? 'bg-purple-500/20 text-purple-400' : 'bg-primary/20'}`}>
+            {displayPicture ? <img src={displayPicture} alt="" className="w-full h-full object-cover" /> : isGroup ? <Users className="w-3.5 h-3.5" /> : displayInitial}
           </div>
-          <span className="text-xs font-medium truncate">{other?.name}</span>
+          <span className="text-xs font-medium truncate">{displayName}</span>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={onMinimize} className="hover:bg-white/10 p-1 rounded transition-colors" data-testid={`minimize-chat-${convId}`}>
@@ -207,6 +304,7 @@ function ChatWindow({ conversation, currentUser, API, authHeaders, onClose, onMi
                   ? 'bg-primary text-white rounded-br-md'
                   : 'bg-white border border-border text-foreground rounded-bl-md shadow-sm'
               }`}>
+                {isGroup && !isMine && <p className="text-[9px] font-semibold text-primary/70 mb-0.5">{msg.sender_name}</p>}
                 {msg.content}
                 <div className={`text-[9px] mt-0.5 ${isMine ? 'text-white/60' : 'text-muted-foreground'}`}>
                   {timeAgo(msg.created_at)}
@@ -252,6 +350,7 @@ export default function ChatWidget() {
   const [minimizedChats, setMinimizedChats] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [groups, setGroups] = useState([]);
 
   const fetchConversations = useCallback(async () => {
     if (!user) return;
@@ -290,12 +389,25 @@ export default function ChatWidget() {
     fetchContacts();
     fetchConversations();
     fetchUnread();
+    fetchGroups();
     const interval = setInterval(() => {
       fetchConversations();
       fetchUnread();
+      fetchGroups();
     }, 8000);
     return () => clearInterval(interval);
   }, [fetchContacts, fetchConversations, fetchUnread]);
+
+  const fetchGroups = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API}/chat/groups`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setGroups(data.groups || []);
+      }
+    } catch {}
+  }, [API, authHeaders, user]);
 
   const handleSelectContact = async (contact) => {
     // Check if already open
@@ -326,6 +438,31 @@ export default function ChatWidget() {
   const handleCloseChat = (convId) => {
     setOpenChats(prev => prev.filter(c => c.conversation_id !== convId));
     setMinimizedChats(prev => { const n = new Set(prev); n.delete(convId); return n; });
+  };
+
+  const handleSelectGroup = (group) => {
+    const existing = openChats.find(c => c.conversation_id === group.conversation_id);
+    if (existing) {
+      setMinimizedChats(prev => { const n = new Set(prev); n.delete(group.conversation_id); return n; });
+      return;
+    }
+    setOpenChats(prev => [...prev.filter(c => c.conversation_id !== group.conversation_id), group].slice(-3));
+    setMinimizedChats(prev => { const n = new Set(prev); n.delete(group.conversation_id); return n; });
+  };
+
+  const handleCreateGroup = async (name, memberIds) => {
+    try {
+      const res = await fetch(`${API}/chat/groups`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, participant_ids: memberIds }),
+      });
+      if (res.ok) {
+        const group = await res.json();
+        setOpenChats(prev => [...prev, group].slice(-3));
+        fetchGroups();
+      }
+    } catch {}
   };
 
   const handleMinimize = (convId) => {
@@ -359,7 +496,10 @@ export default function ChatWidget() {
         <ContactsPanel
           contacts={contacts}
           conversations={conversations}
+          groups={groups}
           onSelectContact={handleSelectContact}
+          onSelectGroup={handleSelectGroup}
+          onCreateGroup={handleCreateGroup}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onClose={() => setIsOpen(false)}

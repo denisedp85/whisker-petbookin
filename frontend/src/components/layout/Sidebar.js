@@ -3,9 +3,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Home, Search, PawPrint, Shield, Settings, LogOut,
-  Users, Store, Gamepad2, Crown, MessageCircle, ChevronDown, ScrollText, MapPin
+  Users, Store, Gamepad2, Crown, MessageCircle, ChevronDown, ScrollText, MapPin, Bell
 } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import NotificationBell from './NotificationBell';
 
 const navGroups = [
   {
@@ -160,6 +161,7 @@ export default function Sidebar() {
 
       {/* Bottom actions */}
       <div className="p-3 border-t border-border space-y-0.5">
+        <NotificationBell />
         <NavLink
           to="/settings"
           data-testid="nav-settings"

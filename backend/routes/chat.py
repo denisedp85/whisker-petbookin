@@ -183,6 +183,18 @@ async def send_message(conv_id: str, data: SendMessage, request: Request):
         {"$set": {"updated_at": now}}
     )
 
+    # Send notification to other participants
+    from routes.notifications import create_notification
+    for pid in conv.get("participants", []):
+        if pid != user["user_id"]:
+            await create_notification(
+                db, pid, "message",
+                f"New message from {user['name']}",
+                data.content.strip()[:100],
+                link=f"/feed",
+                icon="message"
+            )
+
     return msg
 
 
@@ -206,3 +218,82 @@ async def unread_count(request: Request):
         total += count
 
     return {"unread_count": total}
+
+
+class CreateGroup(BaseModel):
+    name: str
+    participant_ids: List[str]
+
+
+@router.post("/groups")
+async def create_group(data: CreateGroup, request: Request):
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+
+    if not data.name.strip():
+        raise HTTPException(status_code=400, detail="Group name required")
+    if len(data.participant_ids) < 1:
+        raise HTTPException(status_code=400, detail="Need at least 1 other participant")
+
+    # Validate all participants exist
+    all_ids = list(set([user["user_id"]] + data.participant_ids))
+    found = await db.users.count_documents({"user_id": {"$in": all_ids}})
+    if found != len(all_ids):
+        raise HTTPException(status_code=400, detail="Some users not found")
+
+    now = datetime.now(timezone.utc)
+    conv = {
+        "conversation_id": gen_id(),
+        "type": "group",
+        "group_name": data.name.strip(),
+        "participants": all_ids,
+        "created_by": user["user_id"],
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.conversations.insert_one(conv)
+    del conv["_id"]
+
+    # Get participant info
+    members = await db.users.find(
+        {"user_id": {"$in": all_ids}},
+        {"_id": 0, "user_id": 1, "name": 1, "picture": 1}
+    ).to_list(50)
+
+    return {**conv, "members": members}
+
+
+@router.get("/groups")
+async def list_groups(request: Request):
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+
+    groups = await db.conversations.find(
+        {"participants": user["user_id"], "type": "group"},
+        {"_id": 0}
+    ).sort("updated_at", -1).to_list(50)
+
+    result = []
+    for g in groups:
+        last_msg = await db.messages.find_one(
+            {"conversation_id": g["conversation_id"]},
+            {"_id": 0}, sort=[("created_at", -1)]
+        )
+        unread = await db.messages.count_documents({
+            "conversation_id": g["conversation_id"],
+            "sender_id": {"$ne": user["user_id"]},
+            "read_by": {"$nin": [user["user_id"]]}
+        })
+        members = await db.users.find(
+            {"user_id": {"$in": g.get("participants", [])}},
+            {"_id": 0, "user_id": 1, "name": 1, "picture": 1}
+        ).to_list(50)
+
+        result.append({
+            **g,
+            "members": members,
+            "last_message": last_msg,
+            "unread_count": unread,
+        })
+
+    return {"groups": result}

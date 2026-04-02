@@ -83,6 +83,8 @@ export default function FeedPage() {
   const [selectedPet, setSelectedPet] = useState('');
   const [postType, setPostType] = useState('text');
   const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaFile, setMediaFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [commentTexts, setCommentTexts] = useState({});
@@ -114,21 +116,45 @@ export default function FeedPage() {
 
   const handlePost = async () => {
     if (!newPost.trim()) return;
-    if (postType !== 'text' && !mediaUrl.trim()) {
-      toast.error(`Please provide a ${postType} URL`);
+    if (postType !== 'text' && !mediaUrl.trim() && !mediaFile) {
+      toast.error(`Please provide a ${postType} URL or upload a file`);
       return;
     }
     setPosting(true);
+
+    let finalMediaUrl = mediaUrl;
+
+    // Upload file if selected
+    if (mediaFile && postType !== 'text') {
+      try {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', mediaFile);
+        const uploadRes = await axios.post(`${API}/uploads/file`, formData, {
+          headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+        });
+        // Use the storage path as the media URL (will be served by our backend)
+        finalMediaUrl = `${API}/uploads/files/${uploadRes.data.storage_path}`;
+        setUploading(false);
+      } catch (e) {
+        setUploading(false);
+        toast.error('File upload failed');
+        setPosting(false);
+        return;
+      }
+    }
+
     try {
       await axios.post(`${API}/feed/posts`, {
         content: newPost,
         pet_id: selectedPet || undefined,
         post_type: postType,
-        media_url: postType !== 'text' ? mediaUrl : undefined,
+        media_url: postType !== 'text' ? finalMediaUrl : undefined,
       }, { headers: authHeaders() });
       setNewPost('');
       setSelectedPet('');
       setMediaUrl('');
+      setMediaFile(null);
       setPostType('text');
       fetchPosts();
       toast.success('Post shared!');
@@ -282,14 +308,30 @@ export default function FeedPage() {
               />
 
               {postType !== 'text' && (
-                <input
-                  type="url"
-                  placeholder={postType === 'video' ? "Paste video URL (YouTube, TikTok, .mp4)" : "Paste audio URL (.mp3, SoundCloud)"}
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  className="w-full border border-border rounded-xl px-4 py-2.5 bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  data-testid="media-url-input"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="url"
+                    placeholder={postType === 'video' ? "Paste video URL (YouTube, TikTok, .mp4)" : "Paste audio URL (.mp3, SoundCloud)"}
+                    value={mediaUrl}
+                    onChange={(e) => setMediaUrl(e.target.value)}
+                    className="w-full border border-border rounded-xl px-4 py-2.5 bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    data-testid="media-url-input"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground">or</span>
+                    <label className="text-xs text-primary font-medium cursor-pointer hover:underline">
+                      Upload {postType} file
+                      <input
+                        type="file"
+                        accept={postType === 'video' ? 'video/mp4,video/webm' : 'audio/mpeg,audio/wav,audio/mp3'}
+                        onChange={(e) => { setMediaFile(e.target.files[0]); setMediaUrl(''); }}
+                        className="hidden"
+                        data-testid="media-file-input"
+                      />
+                    </label>
+                    {mediaFile && <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{mediaFile.name}</span>}
+                  </div>
+                </div>
               )}
 
               <div className="flex items-center justify-between">
@@ -310,7 +352,7 @@ export default function FeedPage() {
                   className="rounded-full bg-primary text-white hover:bg-primary/90 ml-auto"
                   data-testid="post-submit-btn"
                 >
-                  {posting ? 'Posting...' : 'Post'}
+                  {posting ? (uploading ? 'Uploading...' : 'Posting...') : 'Post'}
                 </Button>
               </div>
             </div>

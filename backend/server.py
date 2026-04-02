@@ -50,6 +50,8 @@ from routes.webhook import router as webhook_router
 from routes.chat import router as chat_router
 from routes.marketplace import router as marketplace_router
 from routes.games import router as games_router
+from routes.uploads import router as uploads_router
+from routes.notifications import router as notifications_router
 
 api_router.include_router(auth_router)
 api_router.include_router(pets_router)
@@ -65,6 +67,8 @@ api_router.include_router(webhook_router)
 api_router.include_router(chat_router)
 api_router.include_router(marketplace_router)
 api_router.include_router(games_router)
+api_router.include_router(uploads_router)
+api_router.include_router(notifications_router)
 
 app.include_router(api_router)
 
@@ -74,9 +78,16 @@ async def health_check():
     return {"status": "healthy", "app": "Petbookin"}
 
 
-# Seed admin on startup
+# Seed admin and init storage on startup
 @app.on_event("startup")
 async def seed_admin():
+    # Init object storage
+    try:
+        from routes.uploads import init_storage
+        init_storage()
+    except Exception as e:
+        logger.warning(f"Storage init deferred: {e}")
+
     from utils.auth import hash_password, generate_user_id
     from datetime import datetime, timezone
 

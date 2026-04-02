@@ -166,3 +166,89 @@ async def daily_checkin(request: Request):
     )
 
     return {"streak": streak, "points_earned": bonus, "message": f"Day {streak} streak! +{bonus} points"}
+
+
+@router.post("/treat-catcher/submit")
+async def submit_treat_catcher(request: Request):
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+    body = await request.json()
+
+    score = min(int(body.get("score", 0)), 100)  # Cap at 100
+    points = min(score, 15)  # max 15 pts per game
+
+    now = datetime.now(timezone.utc)
+    await db.game_sessions.insert_one({
+        "session_id": f"tc_{uuid.uuid4().hex[:12]}",
+        "game_id": "treat_catcher",
+        "user_id": user["user_id"],
+        "score": score,
+        "points_earned": points,
+        "status": "completed",
+        "created_at": now,
+    })
+
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$inc": {"points": points}}
+    )
+
+    return {"score": score, "points_earned": points}
+
+
+@router.post("/pet-puzzle/submit")
+async def submit_pet_puzzle(request: Request):
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+    body = await request.json()
+
+    moves = max(int(body.get("moves", 999)), 1)
+    time_taken = max(int(body.get("time", 999)), 1)
+    # Fewer moves + faster time = more points (max 20)
+    points = max(1, min(20, 20 - (moves // 5) - (time_taken // 30)))
+
+    now = datetime.now(timezone.utc)
+    await db.game_sessions.insert_one({
+        "session_id": f"pp_{uuid.uuid4().hex[:12]}",
+        "game_id": "pet_puzzle",
+        "user_id": user["user_id"],
+        "score": moves,
+        "points_earned": points,
+        "status": "completed",
+        "created_at": now,
+    })
+
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$inc": {"points": points}}
+    )
+
+    return {"moves": moves, "time": time_taken, "points_earned": points}
+
+
+@router.post("/pet-show/submit")
+async def submit_pet_show(request: Request):
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+    body = await request.json()
+
+    score = min(int(body.get("score", 0)), 100)
+    points = min(score // 4, 25)  # max 25 pts
+
+    now = datetime.now(timezone.utc)
+    await db.game_sessions.insert_one({
+        "session_id": f"ps_{uuid.uuid4().hex[:12]}",
+        "game_id": "pet_show",
+        "user_id": user["user_id"],
+        "score": score,
+        "points_earned": points,
+        "status": "completed",
+        "created_at": now,
+    })
+
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$inc": {"points": points}}
+    )
+
+    return {"score": score, "points_earned": points}
