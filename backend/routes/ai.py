@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ai", tags=["AI"])
 
 AI_LIMITS = {
-    "free": 0,
+    "free": 3,
     "prime": 10,
     "pro": 50,
     "ultra": 250,
@@ -26,14 +26,16 @@ async def generate_bio(data: BioGenerate, request: Request):
     user = await get_current_user(request, db)
 
     tier = user.get("membership_tier", "free")
-    limit = AI_LIMITS.get(tier, 0)
+    limit = AI_LIMITS.get(tier, 3)
     used = user.get("ai_generations_used", 0)
+    bonus = user.get("ai_generations_bonus", 0)
+    effective_limit = limit + bonus
 
-    if tier == "free":
-        raise HTTPException(status_code=403, detail="AI bios require a subscription. Upgrade to Prime or higher!")
-
-    if used >= limit:
-        raise HTTPException(status_code=403, detail=f"AI generation limit reached ({used}/{limit}). Upgrade your tier for more!")
+    if used >= effective_limit:
+        if tier == "free":
+            raise HTTPException(status_code=403, detail=f"You've used all {limit} free AI generations. Subscribe to Prime for 10/month or buy an add-on pack!")
+        else:
+            raise HTTPException(status_code=403, detail=f"AI generation limit reached ({used}/{effective_limit}). Upgrade your tier or buy an add-on pack!")
 
     pet = await db.pets.find_one({"pet_id": data.pet_id}, {"_id": 0})
     if not pet:
@@ -104,9 +106,13 @@ async def get_ai_limits(request: Request):
     db = get_db(request)
     user = await get_current_user(request, db)
     tier = user.get("membership_tier", "free")
+    bonus = user.get("ai_generations_bonus", 0)
+    base_limit = AI_LIMITS.get(tier, 3)
     return {
         "tier": tier,
         "used": user.get("ai_generations_used", 0),
-        "limit": AI_LIMITS.get(tier, 0),
+        "limit": base_limit,
+        "bonus": bonus,
+        "effective_limit": base_limit + bonus,
         "limits_by_tier": AI_LIMITS
     }
