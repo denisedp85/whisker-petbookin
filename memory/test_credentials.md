@@ -5,14 +5,14 @@
 - Password: PetbookinAdmin2026!
 - Role: owner (admin)
 - Tier: mega
-- Points: ~110 (spent 50 on live time test)
+- Points: ~120 (received 10 pts tip during testing)
 - Live eligible: yes (subscriber)
 
 ## Free Test User
 - Email: freeuser@test.com
 - Password: Test1234!
 - Tier: prime (on 7-day trial from iteration 8)
-- Note: Trial was started during iteration 8 testing. Has used their one free trial.
+- Points: ~40 (spent 10 on tip during testing)
 - Live eligible: yes (prime tier from trial)
 
 ## Stripe Test Card
