@@ -5,19 +5,20 @@
 - Password: PetbookinAdmin2026!
 - Role: owner
 - Tier: mega
+- Is Admin: Yes
 - Is Seller: Yes
+- Breeder ID: PBK-BR-93443891
 
-## Free Test User
-- Email: freeuser@test.com
-- Password: Test1234!
-- Tier: prime
-
-## Buyer Test User
-- Email: buyer@test.com
-- Password: Test1234!
-- Tier: free
+## User's Personal Email (deployed site)
+- Email: dedape1985@gmail.com
+- Role: owner (auto-upgraded on startup)
+- Tier: mega
 
 ## Stripe
-- Mode: TEST (sk_test_emergent in preview)
+- Mode: TEST (sk_test_emergent) in preview
 - Live keys should be set in Deployment Secrets when deploying
 - Test Card: 4242 4242 4242 4242 (any exp, any CVC, any ZIP)
+
+## Note
+- All test users (freeuser@test.com, buyer@test.com) were deleted during cleanup
+- Google Auth uses Emergent-managed OAuth (no GOOGLE_CLIENT_ID/SECRET needed)
