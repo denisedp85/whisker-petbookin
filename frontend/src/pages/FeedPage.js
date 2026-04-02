@@ -6,6 +6,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Heart, MessageCircle, Send, Trash2, Trophy, Star, PawPrint, Video, Music, Type, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import EmojiPicker from '../components/EmojiPicker';
 import axios from 'axios';
 
 const TIER_ORDER = ['free', 'prime', 'pro', 'ultra', 'mega'];
@@ -346,14 +347,17 @@ export default function FeedPage() {
                     {pets.map(p => <option key={p.pet_id} value={p.pet_id}>{p.name}</option>)}
                   </select>
                 )}
-                <Button
-                  onClick={handlePost}
-                  disabled={!newPost.trim() || posting}
-                  className="rounded-full bg-primary text-white hover:bg-primary/90 ml-auto"
-                  data-testid="post-submit-btn"
-                >
-                  {posting ? (uploading ? 'Uploading...' : 'Posting...') : 'Post'}
-                </Button>
+                <div className="flex items-center gap-2 ml-auto">
+                  <EmojiPicker onSelect={(emoji) => setNewPost(prev => prev + emoji)} compact />
+                  <Button
+                    onClick={handlePost}
+                    disabled={!newPost.trim() || posting}
+                    className="rounded-full bg-primary text-white hover:bg-primary/90"
+                    data-testid="post-submit-btn"
+                  >
+                    {posting ? (uploading ? 'Uploading...' : 'Posting...') : 'Post'}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

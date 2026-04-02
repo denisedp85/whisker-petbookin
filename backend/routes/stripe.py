@@ -23,6 +23,15 @@ ALA_CARTE_PACKS = {
     "promo_1": {"name": "Post Promotion (1 Week)", "amount": 4.99, "type": "promotion", "quantity": 1},
 }
 
+VIP_PASS_PRICE = 4.99
+
+CANCELLATION_FEES = {
+    "prime": {"name": "Prime Cancellation Fee", "amount": 1.99},
+    "pro": {"name": "Pro Cancellation Fee", "amount": 4.99},
+    "ultra": {"name": "Ultra Cancellation Fee", "amount": 9.99},
+    "mega": {"name": "Mega Cancellation Fee", "amount": 14.99},
+}
+
 
 class CheckoutRequest(BaseModel):
     tier_id: str
@@ -262,4 +271,209 @@ async def pack_checkout_status(session_id: str, request: Request):
         "status": status.status,
         "payment_status": status.payment_status,
         "pack_name": txn.get("pack_name", ""),
+    }
+
+
+# ─── VIP Pass Purchase ───
+@router.post("/purchase-vip-pass")
+async def purchase_vip_pass(request: Request):
+    from utils.auth import get_current_user
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+
+    if user.get("membership_tier", "free") != "free":
+        raise HTTPException(status_code=400, detail="You already have a subscription with VIP access")
+
+    existing_pass = await db.vip_passes.find_one(
+        {"user_id": user["user_id"], "status": "active"}, {"_id": 0}
+    )
+    if existing_pass:
+        from datetime import datetime as dt_mod
+        if dt_mod.now(timezone.utc) < dt_mod.fromisoformat(str(existing_pass["expires_at"])):
+            raise HTTPException(status_code=400, detail="You already have an active VIP pass")
+
+    body = await request.json()
+    origin_url = body.get("origin_url", "")
+
+    api_key = os.environ["STRIPE_API_KEY"]
+    host_url = str(request.base_url).rstrip("/")
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
+
+    success_url = f"{origin_url}/vip-directory?session_id={{CHECKOUT_SESSION_ID}}&type=vip_pass"
+    cancel_url = f"{origin_url}/vip-directory"
+
+    metadata = {
+        "user_id": user["user_id"],
+        "user_email": user["email"],
+        "purchase_type": "vip_pass",
+        "pass_duration_days": "7",
+    }
+
+    checkout_req = CheckoutSessionRequest(
+        amount=float(VIP_PASS_PRICE),
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=metadata,
+    )
+
+    session = await stripe_checkout.create_checkout_session(checkout_req)
+
+    now = datetime.now(timezone.utc)
+    await db.payment_transactions.insert_one({
+        "session_id": session.session_id,
+        "user_id": user["user_id"],
+        "user_email": user["email"],
+        "purchase_type": "vip_pass",
+        "amount": VIP_PASS_PRICE,
+        "currency": "usd",
+        "payment_status": "pending",
+        "status": "initiated",
+        "metadata": metadata,
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    return {"url": session.url, "session_id": session.session_id}
+
+
+# ─── Free Trial Activation ───
+@router.post("/start-trial")
+async def start_free_trial(request: Request):
+    from utils.auth import get_current_user
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+
+    if user.get("membership_tier", "free") != "free":
+        raise HTTPException(status_code=400, detail="You already have an active subscription")
+
+    existing_trial = await db.trials.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if existing_trial:
+        raise HTTPException(status_code=400, detail="You've already used your free trial")
+
+    body = await request.json()
+    tier_id = body.get("tier_id", "prime")
+    if tier_id not in TIER_PACKAGES:
+        raise HTTPException(status_code=400, detail="Invalid tier for trial")
+
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    trial_end = now + timedelta(days=7)
+
+    await db.trials.insert_one({
+        "user_id": user["user_id"],
+        "user_email": user["email"],
+        "tier_id": tier_id,
+        "trial_start": now,
+        "trial_end": trial_end,
+        "status": "active",
+        "created_at": now,
+    })
+
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {
+            "membership_tier": tier_id,
+            "membership_status": "trial",
+            "trial_ends_at": trial_end.isoformat(),
+            "updated_at": now,
+        }}
+    )
+
+    logger.info(f"User {user['user_id']} started 7-day trial for {tier_id}")
+    return {
+        "message": f"7-day {TIER_PACKAGES[tier_id]['name']} trial activated!",
+        "tier": tier_id,
+        "trial_end": trial_end.isoformat(),
+    }
+
+
+# ─── Subscription Cancellation ───
+@router.post("/cancel-subscription")
+async def cancel_subscription(request: Request):
+    from utils.auth import get_current_user
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+
+    current_tier = user.get("membership_tier", "free")
+    if current_tier == "free":
+        raise HTTPException(status_code=400, detail="No active subscription to cancel")
+
+    body = await request.json()
+    origin_url = body.get("origin_url", "")
+
+    fee_info = CANCELLATION_FEES.get(current_tier)
+    if not fee_info:
+        raise HTTPException(status_code=400, detail="Cannot determine cancellation fee")
+
+    api_key = os.environ["STRIPE_API_KEY"]
+    host_url = str(request.base_url).rstrip("/")
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
+
+    success_url = f"{origin_url}/membership?session_id={{CHECKOUT_SESSION_ID}}&type=cancellation"
+    cancel_url = f"{origin_url}/membership"
+
+    metadata = {
+        "user_id": user["user_id"],
+        "user_email": user["email"],
+        "purchase_type": "cancellation",
+        "cancelled_tier": current_tier,
+    }
+
+    checkout_req = CheckoutSessionRequest(
+        amount=float(fee_info["amount"]),
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=metadata,
+    )
+
+    session = await stripe_checkout.create_checkout_session(checkout_req)
+
+    now = datetime.now(timezone.utc)
+    await db.payment_transactions.insert_one({
+        "session_id": session.session_id,
+        "user_id": user["user_id"],
+        "user_email": user["email"],
+        "purchase_type": "cancellation",
+        "cancelled_tier": current_tier,
+        "cancellation_fee": fee_info["amount"],
+        "amount": fee_info["amount"],
+        "currency": "usd",
+        "payment_status": "pending",
+        "status": "initiated",
+        "metadata": metadata,
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    return {"url": session.url, "session_id": session.session_id, "fee": fee_info["amount"], "fee_name": fee_info["name"]}
+
+
+@router.get("/cancellation-fee")
+async def get_cancellation_fee(request: Request):
+    from utils.auth import get_current_user
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+    tier = user.get("membership_tier", "free")
+    fee_info = CANCELLATION_FEES.get(tier)
+    return {"tier": tier, "fee": fee_info["amount"] if fee_info else 0, "fee_name": fee_info["name"] if fee_info else ""}
+
+
+@router.get("/trial-status")
+async def get_trial_status(request: Request):
+    from utils.auth import get_current_user
+    db = request.app.state.db
+    user = await get_current_user(request, db)
+    trial = await db.trials.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    has_used_trial = trial is not None
+    is_on_trial = user.get("membership_status") == "trial"
+    trial_end = user.get("trial_ends_at")
+    return {
+        "has_used_trial": has_used_trial,
+        "is_on_trial": is_on_trial,
+        "trial_end": trial_end,
+        "current_tier": user.get("membership_tier", "free"),
     }

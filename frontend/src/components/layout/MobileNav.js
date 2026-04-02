@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Home, Search, PawPrint, Shield, Settings, LogOut, Menu, X,
-  Users, Store, Gamepad2, Crown, MessageCircle, ScrollText, MapPin
+  Users, Store, Gamepad2, Crown, MessageCircle, ScrollText, MapPin, Gem
 } from 'lucide-react';
 
 export default function MobileNav() {
@@ -25,6 +25,9 @@ export default function MobileNav() {
     { to: '/breeder-registry', icon: Shield, label: 'Registry' },
     { to: '/certificates', icon: ScrollText, label: 'Certificates' },
     { to: '/breeder-directory', icon: Users, label: 'Breeders' },
+    { to: '/vip-directory', icon: Gem, label: 'VIP Directory' },
+    { to: '/marketplace', icon: Store, label: 'Marketplace' },
+    { to: '/games', icon: Gamepad2, label: 'Games' },
     { to: '/membership', icon: Crown, label: 'Membership' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];

@@ -67,6 +67,38 @@ async def stripe_webhook(request: Request):
                     {"$inc": {"promotions_available": pack_qty}, "$set": {"updated_at": now}},
                 )
             logger.info(f"Webhook: User {user_id} purchased {pack_type} x{pack_qty}")
+
+        elif purchase_type == "vip_pass":
+            from datetime import timedelta
+            duration = int(metadata.get("pass_duration_days", "7"))
+            expires_at = now + timedelta(days=duration)
+            await db.vip_passes.update_one(
+                {"user_id": user_id, "status": "active"},
+                {"$set": {"status": "replaced"}},
+            )
+            await db.vip_passes.insert_one({
+                "user_id": user_id,
+                "purchased_at": now,
+                "expires_at": expires_at,
+                "status": "active",
+                "duration_days": duration,
+            })
+            logger.info(f"Webhook: User {user_id} purchased {duration}-day VIP pass")
+
+        elif purchase_type == "cancellation":
+            cancelled_tier = metadata.get("cancelled_tier", "")
+            await db.users.update_one(
+                {"user_id": user_id},
+                {"$set": {
+                    "membership_tier": "free",
+                    "membership_status": "cancelled",
+                    "cancelled_tier": cancelled_tier,
+                    "cancelled_at": now,
+                    "updated_at": now,
+                }},
+            )
+            logger.info(f"Webhook: User {user_id} cancelled {cancelled_tier} subscription")
+
         else:
             tier_id = metadata.get("tier_id")
             if tier_id:

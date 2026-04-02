@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Home, Search, PawPrint, Shield, Settings, LogOut,
-  Users, Store, Gamepad2, Crown, MessageCircle, ChevronDown, ScrollText, MapPin, Bell
+  Users, Store, Gamepad2, Crown, MessageCircle, ChevronDown, ScrollText, MapPin, Bell, Gem
 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import NotificationBell from './NotificationBell';
@@ -28,6 +28,7 @@ const navGroups = [
     items: [
       { to: '/breeder-registry', icon: Shield, label: 'Breeder Registry' },
       { to: '/breeder-directory', icon: Users, label: 'Breeder Directory' },
+      { to: '/vip-directory', icon: Gem, label: 'VIP Directory' },
       { to: '/certificates', icon: ScrollText, label: 'Certificates' },
     ]
   },

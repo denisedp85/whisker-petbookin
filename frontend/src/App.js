@@ -17,6 +17,7 @@ import CertificatesPage from './pages/CertificatesPage';
 import MapPage from './pages/MapPage';
 import MarketplacePage from './pages/MarketplacePage';
 import GamesPage from './pages/GamesPage';
+import VIPDirectoryPage from './pages/VIPDirectoryPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -79,6 +80,7 @@ function AppRouter() {
       <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
       <Route path="/marketplace" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
       <Route path="/games" element={<ProtectedRoute><GamesPage /></ProtectedRoute>} />
+      <Route path="/vip-directory" element={<ProtectedRoute><VIPDirectoryPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

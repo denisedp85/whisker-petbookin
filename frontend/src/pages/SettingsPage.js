@@ -4,8 +4,9 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles } from 'lucide-react';
+import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles, Lock, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+import EmojiPicker from '../components/EmojiPicker';
 import axios from 'axios';
 
 const PRESET_THEMES = [
@@ -18,12 +19,16 @@ const PRESET_THEMES = [
 ];
 
 const AVATAR_BORDERS = [
-  { id: 'default', label: 'Default', style: 'border-2 border-border' },
-  { id: 'gold', label: 'Gold Ring', style: 'border-3 border-amber-400 ring-2 ring-amber-200' },
-  { id: 'rainbow', label: 'Rainbow', style: 'border-3 border-transparent bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 bg-clip-border' },
-  { id: 'coral', label: 'Coral Glow', style: 'border-3 border-primary ring-2 ring-primary/30' },
-  { id: 'purple', label: 'Purple Aura', style: 'border-3 border-purple-500 ring-2 ring-purple-300' },
-  { id: 'diamond', label: 'Diamond', style: 'border-3 border-cyan-400 ring-2 ring-cyan-200 shadow-lg shadow-cyan-100' },
+  { id: 'default', label: 'Default', style: 'border-2 border-border', free: true },
+  { id: 'gold', label: 'Gold Ring', style: 'border-3 border-amber-400 ring-2 ring-amber-200', free: false },
+  { id: 'rainbow', label: 'Rainbow', style: 'border-3 border-transparent bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 bg-clip-border', free: false },
+  { id: 'coral', label: 'Coral Glow', style: 'border-3 border-primary ring-2 ring-primary/30', free: false },
+  { id: 'purple', label: 'Purple Aura', style: 'border-3 border-purple-500 ring-2 ring-purple-300', free: false },
+  { id: 'diamond', label: 'Diamond', style: 'border-3 border-cyan-400 ring-2 ring-cyan-200 shadow-lg shadow-cyan-100', free: false },
+  { id: 'fire_border', label: 'Fire', style: 'border-3 border-orange-500 ring-2 ring-orange-300 shadow-lg shadow-orange-100', free: false },
+  { id: 'nature_vine', label: 'Nature', style: 'border-3 border-green-500 ring-2 ring-green-300', free: false },
+  { id: 'neon_glow', label: 'Neon', style: 'border-3 border-pink-400 ring-2 ring-pink-300 shadow-lg shadow-pink-100', free: false },
+  { id: 'pixel_art', label: 'Pixel', style: 'border-[3px] border-dashed border-indigo-500', free: false },
 ];
 
 export default function SettingsPage() {
@@ -111,13 +116,18 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 block">Bio</label>
-                <textarea
-                  value={profileForm.bio}
-                  onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
-                  className="w-full border border-border rounded-xl px-4 py-2.5 bg-background text-sm resize-none min-h-[100px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  placeholder="Tell people about yourself..."
-                  data-testid="profile-bio-input"
-                />
+                <div className="relative">
+                  <textarea
+                    value={profileForm.bio}
+                    onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
+                    className="w-full border border-border rounded-xl px-4 py-2.5 bg-background text-sm resize-none min-h-[100px] focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    placeholder="Tell people about yourself..."
+                    data-testid="profile-bio-input"
+                  />
+                  <div className="absolute bottom-2 right-2">
+                    <EmojiPicker onSelect={(emoji) => setProfileForm({...profileForm, bio: profileForm.bio + emoji})} compact />
+                  </div>
+                </div>
               </div>
               <Button type="submit" disabled={loading} className="rounded-full bg-primary text-white hover:bg-primary/90" data-testid="save-profile-btn">
                 {loading ? 'Saving...' : 'Save Changes'}
@@ -180,24 +190,47 @@ export default function SettingsPage() {
 
             {/* Avatar border */}
             <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="font-semibold mb-2" style={{ fontFamily: 'Outfit' }}>Avatar Border</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold" style={{ fontFamily: 'Outfit' }}>Avatar Border</h3>
+                {(user?.membership_tier || 'free') === 'free' && (
+                  <Badge className="bg-amber-100 text-amber-700 text-[9px]">
+                    <Crown className="w-3 h-3 mr-1" /> Subscribe for premium borders
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground mb-4">Choose how your profile picture looks</p>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-                {AVATAR_BORDERS.map((ab) => (
-                  <button
-                    key={ab.id}
-                    onClick={() => handleThemeUpdate({ ...theme, avatar_border: ab.id })}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
-                      (theme.avatar_border || 'default') === ab.id ? 'bg-primary/10 ring-2 ring-primary' : 'hover:bg-muted'
-                    }`}
-                    data-testid={`avatar-border-${ab.id}`}
-                  >
-                    <div className={`w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold ${ab.style}`}>
-                      {user?.name?.charAt(0) || 'P'}
-                    </div>
-                    <span className="text-[10px] font-medium">{ab.label}</span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+                {AVATAR_BORDERS.map((ab) => {
+                  const isSubscriber = (user?.membership_tier || 'free') !== 'free';
+                  const locked = !ab.free && !isSubscriber;
+                  return (
+                    <button
+                      key={ab.id}
+                      onClick={() => {
+                        if (locked) {
+                          toast.error('Subscribe to unlock premium avatar borders!');
+                          return;
+                        }
+                        handleThemeUpdate({ ...theme, avatar_border: ab.id });
+                      }}
+                      className={`relative flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
+                        locked ? 'opacity-60 cursor-not-allowed' :
+                        (theme.avatar_border || 'default') === ab.id ? 'bg-primary/10 ring-2 ring-primary' : 'hover:bg-muted'
+                      }`}
+                      data-testid={`avatar-border-${ab.id}`}
+                    >
+                      {locked && (
+                        <div className="absolute top-1 right-1">
+                          <Lock className="w-3 h-3 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className={`w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold ${ab.style}`}>
+                        {user?.name?.charAt(0) || 'P'}
+                      </div>
+                      <span className="text-[10px] font-medium">{ab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

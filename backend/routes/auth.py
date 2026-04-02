@@ -186,6 +186,29 @@ async def google_session(data: GoogleSession, request: Request, response: Respon
 async def get_me(request: Request):
     db = get_db(request)
     user = await get_current_user(request, db)
+
+    # Check trial expiry
+    if user.get("membership_status") == "trial" and user.get("trial_ends_at"):
+        try:
+            trial_end = datetime.fromisoformat(str(user["trial_ends_at"]))
+            if datetime.now(timezone.utc) > trial_end:
+                await db.users.update_one(
+                    {"user_id": user["user_id"]},
+                    {"$set": {
+                        "membership_tier": "free",
+                        "membership_status": "trial_expired",
+                        "updated_at": datetime.now(timezone.utc),
+                    }}
+                )
+                await db.trials.update_one(
+                    {"user_id": user["user_id"], "status": "active"},
+                    {"$set": {"status": "expired"}}
+                )
+                user["membership_tier"] = "free"
+                user["membership_status"] = "trial_expired"
+        except Exception:
+            pass
+
     user_out = {k: v for k, v in user.items() if k != "password_hash"}
     return user_out
 
@@ -232,3 +255,59 @@ async def logout(request: Request, response: Response):
 
     response.delete_cookie("session_token", path="/")
     return {"message": "Logged out"}
+
+
+
+AVATAR_PRESETS = [
+    {"id": "default", "label": "Default", "free": True},
+    {"id": "golden_crown", "label": "Golden Crown", "free": False},
+    {"id": "rainbow_ring", "label": "Rainbow Ring", "free": False},
+    {"id": "fire_border", "label": "Fire Border", "free": False},
+    {"id": "diamond_frame", "label": "Diamond Frame", "free": False},
+    {"id": "paw_circle", "label": "Paw Circle", "free": False},
+    {"id": "star_burst", "label": "Star Burst", "free": False},
+    {"id": "nature_vine", "label": "Nature Vine", "free": False},
+    {"id": "neon_glow", "label": "Neon Glow", "free": False},
+    {"id": "pixel_art", "label": "Pixel Art", "free": False},
+]
+
+
+@router.get("/avatar-presets")
+async def get_avatar_presets(request: Request):
+    db = get_db(request)
+    user = await get_current_user(request, db)
+    tier = user.get("membership_tier", "free")
+    is_subscriber = tier != "free"
+    return {
+        "presets": AVATAR_PRESETS,
+        "current_avatar": user.get("profile_theme", {}).get("avatar_border", "default"),
+        "is_subscriber": is_subscriber,
+    }
+
+
+@router.put("/avatar")
+async def update_avatar(request: Request):
+    db = get_db(request)
+    user = await get_current_user(request, db)
+
+    body = await request.json()
+    avatar_id = body.get("avatar_id", "default")
+
+    tier = user.get("membership_tier", "free")
+    is_subscriber = tier != "free"
+
+    preset = next((p for p in AVATAR_PRESETS if p["id"] == avatar_id), None)
+    if not preset:
+        raise HTTPException(status_code=400, detail="Invalid avatar preset")
+
+    if not preset["free"] and not is_subscriber:
+        raise HTTPException(status_code=403, detail="Subscribe to unlock premium avatars")
+
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {
+            "profile_theme.avatar_border": avatar_id,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+    return {"message": "Avatar updated", "avatar_id": avatar_id}

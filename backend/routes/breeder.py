@@ -176,3 +176,70 @@ async def breeder_directory(request: Request, page: int = 1, limit: int = 20):
         "page": page,
         "pages": (total + limit - 1) // limit
     }
+
+
+@router.get("/vip-directory")
+async def vip_breeder_directory(request: Request, search: str = "", species: str = "", page: int = 1, limit: int = 20):
+    """VIP directory - browsable by all, contact info gated behind subscription or VIP pass."""
+    db = get_db(request)
+    user = await get_current_user(request, db)
+
+    # Build query
+    query = {"breeder_info": {"$ne": None}}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"breeder_info.kennel_name": {"$regex": search, "$options": "i"}},
+            {"breeder_info.specializations": {"$regex": search, "$options": "i"}},
+        ]
+
+    skip = (page - 1) * limit
+    breeders = await db.users.find(
+        query,
+        {"_id": 0, "password_hash": 0}
+    ).skip(skip).limit(limit).to_list(limit)
+
+    total = await db.users.count_documents(query)
+
+    # Filter by species if provided
+    if species:
+        breeders = [
+            b for b in breeders
+            if any(species.lower() in s.lower() for s in b.get("breeder_info", {}).get("specializations", []))
+        ]
+
+    # Check VIP access
+    has_vip_access = False
+    vip_expiry = None
+    is_paid = user.get("membership_tier", "free") != "free"
+
+    if not is_paid:
+        vip_pass = await db.vip_passes.find_one(
+            {"user_id": user["user_id"], "status": "active"},
+            {"_id": 0}
+        )
+        if vip_pass:
+            if datetime.now(timezone.utc) < datetime.fromisoformat(str(vip_pass["expires_at"])):
+                has_vip_access = True
+                vip_expiry = str(vip_pass["expires_at"])
+            else:
+                await db.vip_passes.update_one(
+                    {"user_id": user["user_id"], "status": "active"},
+                    {"$set": {"status": "expired"}}
+                )
+
+    # If no access, strip contact info from breeders
+    can_view = is_paid or has_vip_access
+    if not can_view:
+        for b in breeders:
+            b.pop("email", None)
+            b.pop("phone", None)
+
+    return {
+        "breeders": breeders,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit,
+        "has_vip_access": has_vip_access,
+        "vip_expiry": vip_expiry,
+    }

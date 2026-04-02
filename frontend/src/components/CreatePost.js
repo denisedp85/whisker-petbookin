@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Image, Send, Sparkles, X, Loader2 } from 'lucide-react';
+import EmojiPicker from './EmojiPicker';
 import axios from 'axios';
 
 export default function CreatePost({ onPostCreated }) {
@@ -13,6 +14,23 @@ export default function CreatePost({ onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [generatingBio, setGeneratingBio] = useState(false);
   const fileRef = useRef();
+  const textRef = useRef();
+
+  const handleEmojiSelect = (emoji) => {
+    const el = textRef.current?.querySelector('textarea');
+    if (el) {
+      const start = el.selectionStart || content.length;
+      const end = el.selectionEnd || content.length;
+      const newContent = content.slice(0, start) + emoji + content.slice(end);
+      setContent(newContent);
+      setTimeout(() => {
+        el.selectionStart = el.selectionEnd = start + emoji.length;
+        el.focus();
+      }, 0);
+    } else {
+      setContent(prev => prev + emoji);
+    }
+  };
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
@@ -77,13 +95,15 @@ export default function CreatePost({ onPostCreated }) {
         <p className="text-xs text-[#65676b]">Posting as {activePet.name}</p>
       </div>
       <div className="p-4 space-y-3">
-        <Textarea
-          data-testid="post-content-input"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={`What's ${activePet.name} up to?`}
-          className="bg-gray-50 border-gray-200 min-h-[80px] text-sm resize-none focus:border-[#4080ff]"
-        />
+        <div ref={textRef}>
+          <Textarea
+            data-testid="post-content-input"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={`What's ${activePet.name} up to?`}
+            className="bg-gray-50 border-gray-200 min-h-[80px] text-sm resize-none focus:border-[#4080ff]"
+          />
+        </div>
         {imagePreview && (
           <div className="relative inline-block">
             <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-md border border-gray-200" />
@@ -117,6 +137,7 @@ export default function CreatePost({ onPostCreated }) {
               {generatingBio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-[#f7b731]" />}
               AI Write
             </Button>
+            <EmojiPicker onSelect={handleEmojiSelect} compact />
           </div>
           <Button
             data-testid="submit-post-btn"

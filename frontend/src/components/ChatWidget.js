@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { MessageCircle, X, Send, Search, ChevronDown, Minus, Users, Plus } from 'lucide-react';
+import EmojiPicker from './EmojiPicker';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -317,7 +318,11 @@ function ChatWindow({ conversation, currentUser, API, authHeaders, onClose, onMi
       </div>
 
       {/* Input */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card flex-shrink-0">
+      <div className="flex items-center gap-1.5 px-3 py-2 border-t border-border bg-card flex-shrink-0">
+        <EmojiPicker
+          onSelect={(emoji) => { setNewMsg(prev => prev + emoji); inputRef.current?.focus(); }}
+          compact
+        />
         <input
           ref={inputRef}
           value={newMsg}
