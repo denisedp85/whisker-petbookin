@@ -1,7 +1,7 @@
 # Petbookin - Product Requirements Document
 
 ## Original Problem Statement
-Build "Petbookin" - A social network for pets with breeder registry, tiered subscriptions, AI bios, video/audio feed, marketplace, gaming, MySpace-style profiles, old-Facebook-style chat, and live streaming with tips. User is preparing to go live on petbookin.com.
+Build "Petbookin" - A social network for pets with breeder registry, tiered subscriptions, AI bios, video/audio feed, marketplace, gaming, MySpace-style profiles, old-Facebook-style chat, live streaming with tips, weekly tournaments, and top contributor system. User is preparing to go live on petbookin.com.
 
 ## Architecture
 - Backend: FastAPI + Motor (Async MongoDB) + JWT Auth + WebSocket
@@ -46,38 +46,43 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 
 ### Phase 10 - Live Streaming
 - [x] WebRTC live video with WebSocket signaling
-- [x] Eligibility: 50 likes + 100 points OR paid subscription
-- [x] Tier-based time limits (Free=5min → Mega=480min)
-- [x] Buy extra time with points or card
-- [x] Two categories: General Feed & Marketplace
+- [x] Tier-based time limits, buy extra time, recording/replay
 - [x] Live chat with emoji, camera/mic toggle, viewer count, timer
-- [x] Recording via MediaRecorder → Object Storage for replay
 
-### Phase 11 - Tip/Donate System (NEW)
-- [x] Points-based tips: 10/25/50/100 pts (instant via WebSocket)
-- [x] Card-based tips: $0.99/$1.99/$2.99/$4.99 (Stripe checkout in new tab)
-- [x] Points deducted from tipper, credited to broadcaster
-- [x] Animated tip notification overlay on stream (slide-in + fade-out)
-- [x] Tip menu popup (star icon) in viewer view
-- [x] Webhook handles card tips, converts to points for broadcaster
-- [x] Tips tracked per stream + broadcaster totals
-- [x] My Tips Received dashboard for broadcasters
+### Phase 11 - Tip/Donate System
+- [x] Points-based tips + Card-based tips via Stripe
+- [x] Animated tip overlays, tip tracking, My Tips dashboard
+
+### Phase 12 - Weekly Tournaments & Top Contributor (NEW - Apr 2, 2026)
+- [x] 3 tournament types: Breed Show, Pet Show, Breed Quiz Battle
+- [x] 3-day tournament duration, multiple per week
+- [x] Entry submission with title, description, media, pet tagging
+- [x] Community voting on entries (toggle votes, no self-voting)
+- [x] Auto-finalization: winners get 500/250/100 pts + Champion badge + 1-week tier upgrade
+- [x] Auto-seed 3 initial tournaments if none exist
+- [x] Admin tournament creation endpoint
+- [x] Top Contributor of the Week (points from games + check-ins + posts + likes)
+- [x] Weekly leaderboard (Top 10) with caching
+- [x] Top Contributor featured banner on Feed page
+- [x] Tournament notifications for winners
+- [x] Hall of Fame for past champions
+- [x] Sidebar & Mobile nav with Tournaments link (NEW badge)
 
 ## Remaining Backlog
 
 ### P1 - Go Live Deployment
-- [ ] Swap Stripe test keys for live keys (user provides)
-- [ ] Deploy to petbookin.com (DNS guidance)
+- [x] Swap Stripe test keys for live keys
+- [ ] Deploy to petbookin.com (DNS configured, awaiting propagation)
 
 ### P1 - Upcoming
-- [ ] VIP Tournaments (weekly breeder competitions)
-- [ ] MySpace Profile enhancements
+- [ ] MySpace Profile enhancements (custom backgrounds, music, themes)
 
 ### P2 - Lower Priority
 - [ ] User blocking/reporting
 - [ ] Push notifications
 - [ ] Chat media sharing
 - [ ] Marketplace direct payment
+- [ ] VIP Tournaments (special events)
 
 ## DB Collections
-users, pets, posts, comments, user_sessions, certificates, litters, payment_transactions, custom_roles, conversations, messages, marketplace_listings, marketplace_inquiries, game_sessions, daily_checkins, notifications, files, vip_passes, trials, live_streams, live_time_purchases, tips
+users, pets, posts, comments, user_sessions, certificates, litters, payment_transactions, custom_roles, conversations, messages, marketplace_listings, marketplace_inquiries, game_sessions, daily_checkins, notifications, files, vip_passes, trials, live_streams, live_time_purchases, tips, tournaments, tournament_entries, weekly_top_contributors
