@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles, Lock, Crown } from 'lucide-react';
+import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles, Lock, Crown, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker from '../components/EmojiPicker';
 import axios from 'axios';
@@ -32,7 +32,7 @@ const AVATAR_BORDERS = [
 ];
 
 export default function SettingsPage() {
-  const { user, updateProfile, authHeaders, API, refreshUser } = useAuth();
+  const { user, updateProfile, authHeaders, API, refreshUser, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [profileForm, setProfileForm] = useState({ name: user?.name || '', bio: user?.bio || '' });
   const [loading, setLoading] = useState(false);
@@ -393,6 +393,21 @@ export default function SettingsPage() {
                   {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
+            </div>
+
+            {/* Logout / Switch Account */}
+            <div className="mt-6 pt-6 border-t border-border space-y-3">
+              <Button
+                onClick={logout}
+                variant="outline"
+                className="w-full rounded-xl text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
+                data-testid="settings-logout-btn"
+              >
+                <LogOut className="w-4 h-4 mr-2" /> Log Out
+              </Button>
+              <p className="text-[11px] text-center text-muted-foreground">
+                Log out to switch to a different account
+              </p>
             </div>
           </div>
         )}
