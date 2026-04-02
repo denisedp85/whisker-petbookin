@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from utils.auth import get_current_user
 import uuid
 import json
+import os
 import logging
 import asyncio
 
@@ -306,3 +307,216 @@ async def get_my_streams(request: Request):
         {"broadcaster_id": user["user_id"]}, {"_id": 0}
     ).sort("created_at", -1).limit(20).to_list(20)
     return {"streams": streams}
+
+
+# ─── Tip System ───
+TIP_PRESETS_POINTS = [
+    {"amount": 10, "label": "10 pts", "emoji": "🐾"},
+    {"amount": 25, "label": "25 pts", "emoji": "🦴"},
+    {"amount": 50, "label": "50 pts", "emoji": "⭐"},
+    {"amount": 100, "label": "100 pts", "emoji": "🔥"},
+]
+
+TIP_PRESETS_CARD = [
+    {"pack_id": "tip_099", "amount": 0.99, "label": "$0.99", "emoji": "🐾"},
+    {"pack_id": "tip_199", "amount": 1.99, "label": "$1.99", "emoji": "🦴"},
+    {"pack_id": "tip_299", "amount": 2.99, "label": "$2.99", "emoji": "⭐"},
+    {"pack_id": "tip_499", "amount": 4.99, "label": "$4.99", "emoji": "🔥"},
+]
+
+
+@router.get("/tip-presets")
+async def get_tip_presets(request: Request):
+    return {
+        "points_tips": TIP_PRESETS_POINTS,
+        "card_tips": TIP_PRESETS_CARD,
+    }
+
+
+@router.post("/tip/{stream_id}")
+async def send_tip(stream_id: str, request: Request):
+    """Send a points-based tip to a live streamer. Instant, no redirect."""
+    db = get_db(request)
+    user = await get_current_user(request, db)
+
+    body = await request.json()
+    tip_points = body.get("points", 0)
+
+    if tip_points not in [t["amount"] for t in TIP_PRESETS_POINTS]:
+        raise HTTPException(status_code=400, detail="Invalid tip amount")
+
+    if user.get("points", 0) < tip_points:
+        raise HTTPException(status_code=400, detail=f"Not enough points. Need {tip_points}, have {user.get('points', 0)}.")
+
+    stream = await db.live_streams.find_one({"stream_id": stream_id}, {"_id": 0})
+    if not stream:
+        raise HTTPException(status_code=404, detail="Stream not found")
+    if stream["status"] != "live":
+        raise HTTPException(status_code=400, detail="Stream is not live")
+    if stream["broadcaster_id"] == user["user_id"]:
+        raise HTTPException(status_code=400, detail="You can't tip yourself")
+
+    now = datetime.now(timezone.utc)
+
+    # Deduct from tipper
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$inc": {"points": -tip_points}, "$set": {"updated_at": now}}
+    )
+
+    # Credit broadcaster
+    await db.users.update_one(
+        {"user_id": stream["broadcaster_id"]},
+        {"$inc": {"points": tip_points, "tips_received_total": tip_points}, "$set": {"updated_at": now}}
+    )
+
+    # Update stream tips
+    await db.live_streams.update_one(
+        {"stream_id": stream_id},
+        {"$inc": {"tips_total": tip_points}, "$push": {"tips": {
+            "tipper_id": user["user_id"],
+            "tipper_name": user.get("name", "Anonymous"),
+            "amount": tip_points,
+            "type": "points",
+            "timestamp": now.isoformat(),
+        }}}
+    )
+
+    # Log tip
+    await db.tips.insert_one({
+        "stream_id": stream_id,
+        "tipper_id": user["user_id"],
+        "tipper_name": user.get("name", "Anonymous"),
+        "broadcaster_id": stream["broadcaster_id"],
+        "amount": tip_points,
+        "type": "points",
+        "created_at": now,
+    })
+
+    # Broadcast tip via WebSocket to the stream room
+    emoji = next((t["emoji"] for t in TIP_PRESETS_POINTS if t["amount"] == tip_points), "🐾")
+    tip_ws_msg = {
+        "type": "tip",
+        "tipper_name": user.get("name", "Anonymous"),
+        "amount": tip_points,
+        "tip_type": "points",
+        "emoji": emoji,
+    }
+
+    room = active_streams.get(stream_id)
+    if room:
+        tip_json = json.dumps(tip_ws_msg)
+        if room.get("broadcaster"):
+            try:
+                await room["broadcaster"].send_text(tip_json)
+            except Exception:
+                pass
+        for vws in room.get("viewers", {}).values():
+            try:
+                await vws.send_text(tip_json)
+            except Exception:
+                pass
+
+    logger.info(f"Tip: {user['user_id']} sent {tip_points}pts to stream {stream_id}")
+    return {
+        "message": f"Tipped {tip_points} points!",
+        "points_remaining": user.get("points", 0) - tip_points,
+        "tip_total": (stream.get("tips_total", 0) + tip_points),
+    }
+
+
+@router.post("/tip-card/{stream_id}")
+async def create_tip_checkout(stream_id: str, request: Request):
+    """Create Stripe checkout for a card-based tip. Opens in new tab."""
+    db = get_db(request)
+    user = await get_current_user(request, db)
+
+    body = await request.json()
+    tip_pack_id = body.get("pack_id", "")
+    origin_url = body.get("origin_url", "")
+
+    preset = next((t for t in TIP_PRESETS_CARD if t["pack_id"] == tip_pack_id), None)
+    if not preset:
+        raise HTTPException(status_code=400, detail="Invalid tip pack")
+
+    stream = await db.live_streams.find_one({"stream_id": stream_id}, {"_id": 0})
+    if not stream:
+        raise HTTPException(status_code=404, detail="Stream not found")
+
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
+    api_key = os.environ["STRIPE_API_KEY"]
+    host_url = str(request.base_url).rstrip("/")
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
+
+    metadata = {
+        "user_id": user["user_id"],
+        "user_email": user["email"],
+        "purchase_type": "tip",
+        "stream_id": stream_id,
+        "broadcaster_id": stream["broadcaster_id"],
+        "tip_amount_usd": str(preset["amount"]),
+        "tip_points_equivalent": str(int(preset["amount"] * 50)),
+    }
+
+    success_url = f"{origin_url}/live?tipped=true"
+    cancel_url = f"{origin_url}/live"
+
+    checkout_req = CheckoutSessionRequest(
+        amount=float(preset["amount"]),
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=metadata,
+    )
+
+    session = await stripe_checkout.create_checkout_session(checkout_req)
+
+    now = datetime.now(timezone.utc)
+    await db.payment_transactions.insert_one({
+        "session_id": session.session_id,
+        "user_id": user["user_id"],
+        "user_email": user["email"],
+        "purchase_type": "tip",
+        "stream_id": stream_id,
+        "broadcaster_id": stream["broadcaster_id"],
+        "amount": preset["amount"],
+        "currency": "usd",
+        "payment_status": "pending",
+        "status": "initiated",
+        "metadata": metadata,
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    return {"url": session.url, "session_id": session.session_id}
+
+
+@router.get("/tips/{stream_id}")
+async def get_stream_tips(stream_id: str, request: Request):
+    db = get_db(request)
+    # First check if stream exists
+    stream = await db.live_streams.find_one({"stream_id": stream_id}, {"_id": 0, "stream_id": 1, "tips": 1, "tips_total": 1})
+    if not stream:
+        raise HTTPException(status_code=404, detail="Stream not found")
+    return {
+        "tips": stream.get("tips", []),
+        "tips_total": stream.get("tips_total", 0),
+    }
+
+
+@router.get("/my-tips-received")
+async def get_my_tips_received(request: Request):
+    db = get_db(request)
+    user = await get_current_user(request, db)
+    tips = await db.tips.find(
+        {"broadcaster_id": user["user_id"]}, {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    total = await db.tips.aggregate([
+        {"$match": {"broadcaster_id": user["user_id"]}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ]).to_list(1)
+    return {
+        "tips": tips,
+        "total_received": total[0]["total"] if total else 0,
+    }

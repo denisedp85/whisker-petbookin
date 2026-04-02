@@ -120,6 +120,16 @@ export default function LivePage() {
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto space-y-6" data-testid="live-page">
+        <style>{`
+          @keyframes tipSlideIn {
+            from { opacity: 0; transform: translateX(-20px) scale(0.8); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+          }
+          @keyframes tipFadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; transform: translateY(-10px); }
+          }
+        `}</style>
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -376,6 +386,8 @@ function BroadcasterView({ stream, user, API, authHeaders, onEnd }) {
   const [chatInput, setChatInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(stream.max_duration_mins * 60);
   const [ending, setEnding] = useState(false);
+  const [tipNotifs, setTipNotifs] = useState([]);
+  const [tipsTotal, setTipsTotal] = useState(0);
   const chatEndRef = useRef(null);
   const token = localStorage.getItem('petbookin_session') || '';
 
@@ -423,6 +435,15 @@ function BroadcasterView({ stream, user, API, authHeaders, onEnd }) {
           handleIceCandidate(msg);
         } else if (msg.type === 'chat') {
           setChatMessages(prev => [...prev, msg]);
+        } else if (msg.type === 'tip') {
+          setTipNotifs(prev => [...prev, { ...msg, id: Date.now() + Math.random() }]);
+          setTipsTotal(prev => prev + (msg.amount || 0));
+          setChatMessages(prev => [...prev, {
+            sender_name: 'System',
+            message: `${msg.emoji} ${msg.tipper_name} tipped ${msg.amount} points!`,
+            system: true, tip: true,
+          }]);
+          setTimeout(() => setTipNotifs(prev => prev.slice(1)), 4000);
         }
       };
 
@@ -572,6 +593,11 @@ function BroadcasterView({ stream, user, API, authHeaders, onEnd }) {
           <Badge variant="outline" className={`gap-1 ${isLow ? 'text-red-500 border-red-300' : ''}`}>
             <Clock className="w-3 h-3" /> {mins}:{secs.toString().padStart(2, '0')}
           </Badge>
+          {tipsTotal > 0 && (
+            <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
+              <Star className="w-3 h-3" /> {tipsTotal} pts tipped
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -580,6 +606,19 @@ function BroadcasterView({ stream, user, API, authHeaders, onEnd }) {
         <div className="lg:col-span-2">
           <div className="relative rounded-2xl overflow-hidden bg-black aspect-video">
             <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" data-testid="broadcaster-video" />
+            {/* Tip notifications overlay */}
+            <div className="absolute top-4 left-4 space-y-2 pointer-events-none z-10">
+              {tipNotifs.map((tip) => (
+                <div
+                  key={tip.id}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 text-white text-sm font-bold animate-bounce-in shadow-lg"
+                  style={{ animation: 'tipSlideIn 0.5s ease, tipFadeOut 0.5s ease 3.5s forwards' }}
+                >
+                  <span className="text-lg">{tip.emoji}</span>
+                  <span>{tip.tipper_name} tipped {tip.amount}pts!</span>
+                </div>
+              ))}
+            </div>
             {/* Controls overlay */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
               <button
@@ -655,8 +694,18 @@ function ViewerView({ stream, user, API, authHeaders, onClose }) {
   const [viewerCount, setViewerCount] = useState(stream.viewer_count || 0);
   const [liked, setLiked] = useState(false);
   const [ended, setEnded] = useState(false);
+  const [tipNotifs, setTipNotifs] = useState([]);
+  const [showTipMenu, setShowTipMenu] = useState(false);
+  const [tippingPack, setTippingPack] = useState(null);
   const chatEndRef = useRef(null);
   const token = localStorage.getItem('petbookin_session') || '';
+
+  const TIP_POINTS = [
+    { amount: 10, emoji: '🐾', label: '10' },
+    { amount: 25, emoji: '🦴', label: '25' },
+    { amount: 50, emoji: '⭐', label: '50' },
+    { amount: 100, emoji: '🔥', label: '100' },
+  ];
 
   useEffect(() => {
     const wsUrl = API.replace('https://', 'wss://').replace('http://', 'ws://');
@@ -683,6 +732,14 @@ function ViewerView({ stream, user, API, authHeaders, onClose }) {
         setChatMessages(prev => [...prev, { sender_name: 'System', message: msg.type === 'viewer_joined' ? `${msg.viewer_name} joined` : 'A viewer left', system: true }]);
       } else if (msg.type === 'stream_ended') {
         setEnded(true);
+      } else if (msg.type === 'tip') {
+        setTipNotifs(prev => [...prev, { ...msg, id: Date.now() + Math.random() }]);
+        setChatMessages(prev => [...prev, {
+          sender_name: 'System',
+          message: `${msg.emoji} ${msg.tipper_name} tipped ${msg.amount} points!`,
+          system: true, tip: true,
+        }]);
+        setTimeout(() => setTipNotifs(prev => prev.slice(1)), 4000);
       }
     };
 
@@ -729,6 +786,35 @@ function ViewerView({ stream, user, API, authHeaders, onClose }) {
     } catch {}
   };
 
+  const handleTipPoints = async (amount) => {
+    setTippingPack(amount);
+    try {
+      const res = await fetch(`${API}/live/tip/${stream.stream_id}`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ points: amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      toast.success(data.message);
+      setShowTipMenu(false);
+    } catch (err) { toast.error(err.message); }
+    setTippingPack(null);
+  };
+
+  const handleTipCard = async (packId) => {
+    try {
+      const res = await fetch(`${API}/live/tip-card/${stream.stream_id}`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pack_id: packId, origin_url: window.location.origin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      if (data.url) window.open(data.url, '_blank');
+    } catch (err) { toast.error(err.message); }
+  };
+
   const sendChat = () => {
     if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== 1) return;
     wsRef.current.send(JSON.stringify({ type: 'chat', message: chatInput }));
@@ -764,7 +850,21 @@ function ViewerView({ stream, user, API, authHeaders, onClose }) {
         <div className="lg:col-span-2">
           <div className="relative rounded-2xl overflow-hidden bg-black aspect-video">
             <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" data-testid="viewer-video" />
-            <div className="absolute bottom-4 right-4">
+            {/* Tip notification overlay */}
+            <div className="absolute top-4 left-4 space-y-2 pointer-events-none z-10">
+              {tipNotifs.map((tip) => (
+                <div
+                  key={tip.id}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 text-white text-sm font-bold shadow-lg"
+                  style={{ animation: 'tipSlideIn 0.5s ease, tipFadeOut 0.5s ease 3.5s forwards' }}
+                >
+                  <span className="text-lg">{tip.emoji}</span>
+                  <span>{tip.tipper_name} tipped {tip.amount}pts!</span>
+                </div>
+              ))}
+            </div>
+            {/* Action buttons */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-2">
               <button
                 onClick={handleLike}
                 className={`p-3 rounded-full transition-all ${liked ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'}`}
@@ -772,6 +872,55 @@ function ViewerView({ stream, user, API, authHeaders, onClose }) {
               >
                 <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
               </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowTipMenu(!showTipMenu)}
+                  className="p-3 rounded-full bg-amber-500/80 text-white hover:bg-amber-500 transition-all"
+                  data-testid="tip-btn"
+                >
+                  <Star className="w-5 h-5" />
+                </button>
+                {showTipMenu && (
+                  <div className="absolute bottom-full mb-2 right-0 w-[220px] bg-card border border-border rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-bottom-2" data-testid="tip-menu">
+                    <p className="text-xs font-bold mb-2 text-center" style={{ fontFamily: 'Outfit' }}>Send a Tip</p>
+                    {/* Points tips */}
+                    <p className="text-[10px] font-medium text-muted-foreground mb-1">With Points</p>
+                    <div className="grid grid-cols-4 gap-1 mb-3">
+                      {TIP_POINTS.map((t) => (
+                        <button
+                          key={t.amount}
+                          onClick={() => handleTipPoints(t.amount)}
+                          disabled={tippingPack === t.amount}
+                          className="flex flex-col items-center gap-0.5 p-2 rounded-xl hover:bg-primary/10 transition-all text-center"
+                          data-testid={`tip-pts-${t.amount}`}
+                        >
+                          <span className="text-lg">{t.emoji}</span>
+                          <span className="text-[9px] font-bold">{t.label}pts</span>
+                        </button>
+                      ))}
+                    </div>
+                    {/* Card tips */}
+                    <p className="text-[10px] font-medium text-muted-foreground mb-1">With Card</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {[
+                        { id: 'tip_099', label: '$0.99', emoji: '🐾' },
+                        { id: 'tip_199', label: '$1.99', emoji: '🦴' },
+                        { id: 'tip_299', label: '$2.99', emoji: '⭐' },
+                        { id: 'tip_499', label: '$4.99', emoji: '🔥' },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => handleTipCard(t.id)}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium border border-border hover:bg-muted transition-all"
+                          data-testid={`tip-card-${t.id}`}
+                        >
+                          <span>{t.emoji}</span> {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -104,6 +104,46 @@ async def stripe_webhook(request: Request):
             )
             logger.info(f"Webhook: User {user_id} cancelled {cancelled_tier} subscription")
 
+        elif purchase_type == "tip":
+            stream_id = metadata.get("stream_id", "")
+            broadcaster_id = metadata.get("broadcaster_id", "")
+            tip_points = int(metadata.get("tip_points_equivalent", "0"))
+            tip_usd = float(metadata.get("tip_amount_usd", "0"))
+
+            # Credit broadcaster with points equivalent
+            if broadcaster_id and tip_points > 0:
+                await db.users.update_one(
+                    {"user_id": broadcaster_id},
+                    {"$inc": {"points": tip_points, "tips_received_total": tip_points}, "$set": {"updated_at": now}}
+                )
+
+            # Log tip
+            tipper_name = metadata.get("user_email", "Anonymous")
+            if stream_id:
+                await db.live_streams.update_one(
+                    {"stream_id": stream_id},
+                    {"$inc": {"tips_total": tip_points}, "$push": {"tips": {
+                        "tipper_id": user_id,
+                        "tipper_name": tipper_name,
+                        "amount": tip_points,
+                        "amount_usd": tip_usd,
+                        "type": "card",
+                        "timestamp": now.isoformat(),
+                    }}}
+                )
+
+            await db.tips.insert_one({
+                "stream_id": stream_id,
+                "tipper_id": user_id,
+                "tipper_name": tipper_name,
+                "broadcaster_id": broadcaster_id,
+                "amount": tip_points,
+                "amount_usd": tip_usd,
+                "type": "card",
+                "created_at": now,
+            })
+            logger.info(f"Webhook: Tip ${tip_usd} ({tip_points}pts) from {user_id} to {broadcaster_id}")
+
         else:
             tier_id = metadata.get("tier_id")
             if tier_id:
