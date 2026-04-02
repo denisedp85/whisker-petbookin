@@ -1,7 +1,7 @@
 # Petbookin - Product Requirements Document
 
 ## Original Problem Statement
-Build "Petbookin" - A social network for pets with breeder registry, tiered subscriptions, AI bios, video/audio feed, marketplace, gaming, MySpace-style profiles, and old-Facebook-style chat.
+Build "Petbookin" - A social network for pets with breeder registry, tiered subscriptions, AI bios, video/audio feed, marketplace, gaming, MySpace-style profiles, and old-Facebook-style chat. User is preparing to go live on petbookin.com with real Stripe keys.
 
 ## Architecture
 - Backend: FastAPI + Motor (Async MongoDB) + JWT Auth
@@ -23,11 +23,14 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] Stripe subscriptions (Prime/Pro/Ultra/Mega) + webhook + auto-upgrade
 - [x] Payment History in Settings > Billing tab
 - [x] A La Carte purchases (10/50 AI gens, post promotions)
+- [x] 7-Day Free Trial (no card required, any tier, one-time use)
+- [x] Tier-based Cancellation Fees (Prime $1.99, Pro $4.99, Ultra $9.99, Mega $14.99)
+- [x] VIP Pass ($4.99/week access to breeder contact info)
 
 ### Phase 4 - Content & Customization
 - [x] TikTok-style video posts (Ultra+ gated) + Suno-style audio posts (Pro+ gated)
 - [x] YouTube iframe embeds + HTML5 audio player in feed
-- [x] MySpace-style Profile: 6 presets, 6 avatar borders, music URL, bg image, custom colors
+- [x] MySpace-style Profile: 6 presets, 10 avatar borders (1 free + 9 premium), music URL, bg image, custom colors
 - [x] Custom Role Management (admin creates roles with colors/badges)
 
 ### Phase 5 - Chat System
@@ -36,37 +39,46 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] Group chat (create groups, send messages, member list)
 - [x] Chat windows (max 3, minimize/close)
 - [x] Polling-based real-time messaging
+- [x] Emoji picker in chat input
 
 ### Phase 6 - Marketplace
 - [x] Create/browse/delete listings (pets, accessories, services, food)
 - [x] Category filters, search, sort, inquiry system, My Listings view
 
 ### Phase 7 - Gaming & Points
-- [x] Breed Quiz (5 questions, 10 pts each)
-- [x] Treat Catcher (arcade, max 15 pts)
-- [x] Pet Puzzle (sliding tiles, max 20 pts)
-- [x] Pet Show Champion (pet judging, max 25 pts)
-- [x] Daily Check-in with streaks (5 pts/day, max 50)
-- [x] Global Leaderboard, post promotion display logic
+- [x] Breed Quiz, Treat Catcher, Pet Puzzle, Pet Show Champion
+- [x] Daily Check-in with streaks, Global Leaderboard
 
 ### Phase 8 - Notifications & File Upload
-- [x] Notification bell in sidebar with dropdown panel
-- [x] Real-time notification count badge
-- [x] Auto-notifications on new messages
-- [x] Native file upload via Emergent Object Storage (video, audio, images)
-- [x] Feed posts support both URL and file upload for media
+- [x] Notification bell, real-time count badge, auto-notifications
+- [x] Native file upload via Emergent Object Storage
+
+### Phase 9 - VIP & Engagement Features (NEW)
+- [x] VIP Breeder Directory (puppies.com style) - search/filter breeders, contact info gated
+- [x] 1-Week VIP Access Pass ($4.99) for non-subscribers
+- [x] Live Emojis - Animated emoji picker in posts, chat, and bios (free for everyone)
+- [x] Premium Avatar Borders (9 premium styles for subscribers, 1 default free)
+- [x] 7-Day Free Trial activation (no credit card)
+- [x] Subscription cancellation with tier-based fees via Stripe checkout
 
 ## Remaining Backlog
 
+### P1 - Go Live
+- [ ] Swap Stripe test keys for live keys (user must provide)
+- [ ] Deploy to petbookin.com (DNS configuration guidance)
+
+### P1 - Upcoming
+- [ ] VIP Tournaments (weekly competitions for verified breeders)
+- [ ] MySpace-style Profile Customization enhancements
+
 ### P2 - Lower Priority
-- VIP Features (tournaments, group gatherings for verified breeders)
-- User blocking/reporting
-- Push notifications (browser/mobile)
-- Chat media sharing (images in chat)
-- Marketplace payment integration (buy directly)
+- [ ] User blocking/reporting
+- [ ] Push notifications (browser/mobile)
+- [ ] Chat media sharing (images in chat)
+- [ ] Marketplace payment integration (buy directly)
 
 ## Key Routes
-- Auth, Pets, Feed, Chat (direct + groups), Marketplace, Games, Breeder, Admin, AI, Certificates, Stripe, Webhook, Notifications, Uploads, Places, Search
+Auth, Pets, Feed, Chat (direct + groups), Marketplace, Games, Breeder, Admin, AI, Certificates, Stripe, Webhook, Notifications, Uploads, Places, Search, VIP Directory
 
 ## DB Collections
-users, pets, posts, comments, user_sessions, certificates, litters, payment_transactions, custom_roles, conversations, messages, marketplace_listings, marketplace_inquiries, game_sessions, daily_checkins, notifications, files
+users, pets, posts, comments, user_sessions, certificates, litters, payment_transactions, custom_roles, conversations, messages, marketplace_listings, marketplace_inquiries, game_sessions, daily_checkins, notifications, files, vip_passes, trials

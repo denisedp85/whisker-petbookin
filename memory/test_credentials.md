@@ -10,8 +10,8 @@
 ## Free Test User
 - Email: freeuser@test.com
 - Password: Test1234!
-- Tier: free
-- Points: 5+
+- Tier: prime (on 7-day trial, activated during testing)
+- Note: Trial was started during iteration 8 testing. User has used their one free trial.
 
 ## Stripe Test Card
 - Card: 4242 4242 4242 4242
