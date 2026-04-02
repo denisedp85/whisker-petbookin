@@ -72,9 +72,10 @@ async def create_post(data: PostCreate, request: Request):
 async def get_posts(request: Request, page: int = 1, limit: int = 20):
     db = get_db(request)
     skip = (page - 1) * limit
+    # Promoted posts first, then by creation date
     posts = await db.posts.find(
         {}, {"_id": 0}
-    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    ).sort([("is_promoted", -1), ("created_at", -1)]).skip(skip).limit(limit).to_list(limit)
 
     total = await db.posts.count_documents({})
     return {

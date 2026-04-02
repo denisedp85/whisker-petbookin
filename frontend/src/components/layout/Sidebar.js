@@ -20,7 +20,6 @@ const navGroups = [
     label: 'My Pets',
     items: [
       { to: '/my-pets', icon: PawPrint, label: 'My Pets' },
-      { to: '/messages', icon: MessageCircle, label: 'Messages', badge: 'Soon' },
     ]
   },
   {
@@ -34,8 +33,8 @@ const navGroups = [
   {
     label: 'Market & Play',
     items: [
-      { to: '/marketplace', icon: Store, label: 'Marketplace', badge: 'Soon' },
-      { to: '/games', icon: Gamepad2, label: 'Games', badge: 'Soon' },
+      { to: '/marketplace', icon: Store, label: 'Marketplace' },
+      { to: '/games', icon: Gamepad2, label: 'Games' },
     ]
   },
 ];

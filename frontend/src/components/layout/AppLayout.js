@@ -2,6 +2,7 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import ErrorBoundary from '../ErrorBoundary';
+import ChatWidget from '../ChatWidget';
 
 export default function AppLayout({ children }) {
   return (
@@ -15,6 +16,7 @@ export default function AppLayout({ children }) {
           </ErrorBoundary>
         </div>
       </main>
+      <ChatWidget />
     </div>
   );
 }

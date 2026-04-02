@@ -47,6 +47,9 @@ from routes.certificates import router as certificates_router
 from routes.places import router as places_router
 from routes.stripe import router as stripe_router
 from routes.webhook import router as webhook_router
+from routes.chat import router as chat_router
+from routes.marketplace import router as marketplace_router
+from routes.games import router as games_router
 
 api_router.include_router(auth_router)
 api_router.include_router(pets_router)
@@ -59,6 +62,9 @@ api_router.include_router(certificates_router)
 api_router.include_router(places_router)
 api_router.include_router(stripe_router)
 api_router.include_router(webhook_router)
+api_router.include_router(chat_router)
+api_router.include_router(marketplace_router)
+api_router.include_router(games_router)
 
 app.include_router(api_router)
 
