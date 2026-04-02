@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { MessageCircle, X, Send, Search, ChevronDown, Minus, Users, Plus } from 'lucide-react';
+import { MessageCircle, X, Send, Search, ChevronDown, Minus, Users, Plus, GripVertical } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 
 function timeAgo(dateStr) {
@@ -15,7 +15,7 @@ function timeAgo(dateStr) {
 }
 
 /* ─── Contact List Panel ─── */
-function ContactsPanel({ contacts, conversations, groups, onSelectContact, onSelectGroup, onCreateGroup, searchQuery, setSearchQuery, onClose }) {
+function ContactsPanel({ contacts, conversations, groups, onSelectContact, onSelectGroup, onCreateGroup, searchQuery, setSearchQuery, onClose, onDragStart }) {
   const [tab, setTab] = useState('direct');
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [groupName, setGroupName] = useState('');
@@ -57,8 +57,11 @@ function ContactsPanel({ contacts, conversations, groups, onSelectContact, onSel
 
   return (
     <div className="w-[280px] h-[440px] bg-card border border-border rounded-t-xl shadow-2xl flex flex-col overflow-hidden" data-testid="chat-contacts-panel">
-      <div className="flex items-center justify-between px-4 py-3 bg-[#28211E] text-white">
-        <span className="text-sm font-semibold" style={{ fontFamily: 'Outfit' }}>Chat</span>
+      <div className="flex items-center justify-between px-4 py-3 bg-[#28211E] text-white cursor-grab active:cursor-grabbing" onMouseDown={onDragStart}>
+        <div className="flex items-center gap-1.5">
+          <GripVertical className="w-3.5 h-3.5 opacity-50" />
+          <span className="text-sm font-semibold" style={{ fontFamily: 'Outfit' }}>Chat</span>
+        </div>
         <button onClick={onClose} className="hover:bg-white/10 p-1 rounded transition-colors" data-testid="close-contacts-btn">
           <ChevronDown className="w-4 h-4" />
         </button>
@@ -356,6 +359,10 @@ export default function ChatWidget() {
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [groups, setGroups] = useState([]);
+  const [position, setPosition] = useState({ x: null, y: null });
+  const dragRef = useRef(null);
+  const isDragging = useRef(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
 
   const fetchConversations = useCallback(async () => {
     if (!user) return;
@@ -479,10 +486,42 @@ export default function ChatWidget() {
     });
   };
 
+  // Drag handlers
+  const handleMouseDown = (e) => {
+    if (e.target.closest('input, button, textarea')) return;
+    isDragging.current = true;
+    const rect = dragRef.current.getBoundingClientRect();
+    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.current) return;
+    const x = Math.max(0, Math.min(e.clientX - dragOffset.current.x, window.innerWidth - 300));
+    const y = Math.max(0, Math.min(e.clientY - dragOffset.current.y, window.innerHeight - 50));
+    setPosition({ x, y });
+  };
+
+  const handleMouseUp = () => {
+    isDragging.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
   if (!user) return null;
 
+  const posStyle = position.x !== null
+    ? { position: 'fixed', left: position.x, top: position.y, bottom: 'auto', right: 'auto' }
+    : {};
+
   return (
-    <div className="fixed bottom-0 right-0 z-50 flex items-end gap-2 pr-4" data-testid="chat-widget">
+    <div
+      ref={dragRef}
+      className="fixed bottom-0 right-0 z-50 flex items-end gap-2 pr-4"
+      style={posStyle}
+      data-testid="chat-widget"
+    >
       {/* Open chat windows */}
       {openChats.map((convo) => (
         <ChatWindow
@@ -509,6 +548,7 @@ export default function ChatWidget() {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onClose={() => setIsOpen(false)}
+          onDragStart={handleMouseDown}
         />
       )}
 
@@ -516,7 +556,8 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => { setIsOpen(true); fetchContacts(); fetchConversations(); }}
-          className="relative mb-0 h-10 bg-[#28211E] text-white rounded-t-lg px-4 flex items-center gap-2 hover:bg-[#3a332e] transition-colors shadow-lg"
+          onMouseDown={handleMouseDown}
+          className="relative mb-0 h-10 bg-[#28211E] text-white rounded-t-lg px-4 flex items-center gap-2 hover:bg-[#3a332e] transition-colors shadow-lg cursor-grab active:cursor-grabbing"
           data-testid="chat-toggle-btn"
         >
           <MessageCircle className="w-4 h-4" />

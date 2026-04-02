@@ -239,8 +239,27 @@ async def seed_admin():
     from utils.auth import hash_password, generate_user_id
     from datetime import datetime, timezone
 
-    admin = await db.users.find_one({"is_admin": True}, {"_id": 0})
-    if not admin:
+    admin_fields = {
+        "is_admin": True,
+        "role": "owner",
+        "role_title": "Site Owner",
+        "role_badge": "owner",
+        "account_type": "admin",
+        "membership_tier": "mega",
+        "membership_status": "active",
+        "membership_expires_at": None,
+        "is_seller": True,
+    }
+
+    # Upgrade admin@petbookin.com
+    existing = await db.users.find_one({"email": "admin@petbookin.com"}, {"_id": 0})
+    if existing:
+        await db.users.update_one(
+            {"email": "admin@petbookin.com"},
+            {"$set": {**admin_fields, "updated_at": datetime.now(timezone.utc)}}
+        )
+        logger.info("Admin user admin@petbookin.com upgraded to owner/mega")
+    else:
         admin_id = generate_user_id()
         now = datetime.now(timezone.utc)
         await db.users.insert_one({
@@ -250,27 +269,24 @@ async def seed_admin():
             "name": "Petbookin Admin",
             "picture": "",
             "bio": "Official Petbookin Administrator",
-            "account_type": "admin",
-            "membership_tier": "mega",
-            "membership_status": "active",
-            "membership_expires_at": None,
-            "role": "owner",
-            "role_title": "Site Owner",
-            "role_badge": "owner",
-            "is_admin": True,
+            **admin_fields,
             "breeder_info": None,
             "ai_generations_used": 0,
             "points": 0,
             "profile_theme": {
-                "bg_color": "#FFFDF9",
-                "card_bg": "#FFFFFF",
-                "text_color": "#28211E",
-                "accent_color": "#FF7A6A",
-                "music_url": None,
-                "video_bg_url": None,
-                "avatar_border": "default"
+                "bg_color": "#FFFDF9", "card_bg": "#FFFFFF",
+                "text_color": "#28211E", "accent_color": "#FF7A6A",
+                "music_url": None, "video_bg_url": None, "avatar_border": "default"
             },
-            "created_at": now,
-            "updated_at": now
+            "created_at": now, "updated_at": now
         })
-        logger.info(f"Admin seeded: admin@petbookin.com")
+        logger.info("Admin seeded: admin@petbookin.com")
+
+    # Also upgrade dedape1985@gmail.com if exists
+    dedape = await db.users.find_one({"email": "dedape1985@gmail.com"}, {"_id": 0})
+    if dedape:
+        await db.users.update_one(
+            {"email": "dedape1985@gmail.com"},
+            {"$set": {**admin_fields, "updated_at": datetime.now(timezone.utc)}}
+        )
+        logger.info("Admin user dedape1985@gmail.com upgraded to owner/mega")

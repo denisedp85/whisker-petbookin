@@ -186,3 +186,90 @@ async def delete_custom_role(role_id: str, request: Request):
         {"$set": {"role": "user", "role_title": "", "role_badge": "user", "role_color": "", "updated_at": datetime.now(timezone.utc)}}
     )
     return {"message": f"Custom role '{role_id}' deleted"}
+
+
+
+@router.post("/cleanup-test-data")
+async def cleanup_test_data(request: Request):
+    """Remove all test posts, test pets, and test users (except admins)."""
+    await require_admin(request)
+    db = get_db(request)
+
+    # Delete test posts (all posts from test accounts or with test content)
+    test_emails = ["freeuser@test.com", "buyer@test.com", "testuser@test.com"]
+    test_users = await db.users.find({"email": {"$in": test_emails}}, {"_id": 0, "user_id": 1}).to_list(100)
+    test_user_ids = [u["user_id"] for u in test_users]
+
+    # Delete posts by test users
+    post_result = await db.posts.delete_many({"author_id": {"$in": test_user_ids}})
+
+    # Delete pets by test users
+    pet_result = await db.pets.delete_many({"owner_id": {"$in": test_user_ids}})
+
+    # Delete test users themselves
+    user_result = await db.users.delete_many({"email": {"$in": test_emails}})
+
+    # Delete all posts if admin wants a clean slate
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    if body.get("delete_all_posts"):
+        all_posts = await db.posts.delete_many({})
+        all_comments = await db.comments.delete_many({})
+        return {
+            "message": "All test data and all posts cleaned up",
+            "posts_deleted": all_posts.deleted_count,
+            "comments_deleted": all_comments.deleted_count,
+            "pets_deleted": pet_result.deleted_count,
+            "test_users_deleted": user_result.deleted_count,
+        }
+
+    return {
+        "message": "Test data cleaned up",
+        "posts_deleted": post_result.deleted_count,
+        "pets_deleted": pet_result.deleted_count,
+        "test_users_deleted": user_result.deleted_count,
+    }
+
+
+@router.post("/setup-breeder/{user_email}")
+async def setup_breeder(user_email: str, request: Request):
+    """Set up a user as an official Petbookin breeder."""
+    await require_admin(request)
+    db = get_db(request)
+    import uuid
+
+    body = await request.json()
+    breeds = body.get("breeds", [])
+    kennel_name = body.get("kennel_name", "")
+    breeder_type = body.get("breeder_type", "hobby")
+
+    user = await db.users.find_one({"email": user_email}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    breeder_id = user.get("petbookin_breeder_id") or f"PBK-BR-{uuid.uuid4().hex[:8].upper()}"
+
+    breeder_info = {
+        "petbookin_breeder_id": breeder_id,
+        "kennel_name": kennel_name,
+        "breeds": breeds,
+        "breeder_type": breeder_type,
+        "is_verified": True,
+        "verified_at": datetime.now(timezone.utc).isoformat(),
+        "registry_status": "active",
+    }
+
+    await db.users.update_one(
+        {"email": user_email},
+        {"$set": {
+            "petbookin_breeder_id": breeder_id,
+            "breeder_info": breeder_info,
+            "account_type": "breeder",
+            "updated_at": datetime.now(timezone.utc),
+        }}
+    )
+
+    return {
+        "message": f"Breeder credentials set for {user_email}",
+        "breeder_id": breeder_id,
+        "breeder_info": breeder_info,
+    }
