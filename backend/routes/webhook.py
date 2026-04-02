@@ -66,6 +66,11 @@ async def stripe_webhook(request: Request):
                     {"user_id": user_id},
                     {"$inc": {"promotions_available": pack_qty}, "$set": {"updated_at": now}},
                 )
+            elif pack_type == "live_time":
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {"$inc": {"live_bonus_minutes": pack_qty}, "$set": {"updated_at": now}},
+                )
             logger.info(f"Webhook: User {user_id} purchased {pack_type} x{pack_qty}")
 
         elif purchase_type == "vip_pass":

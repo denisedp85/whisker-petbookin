@@ -21,6 +21,8 @@ ALA_CARTE_PACKS = {
     "ai_10": {"name": "10 AI Generations", "amount": 2.99, "type": "ai_gens", "quantity": 10},
     "ai_50": {"name": "50 AI Generations", "amount": 9.99, "type": "ai_gens", "quantity": 50},
     "promo_1": {"name": "Post Promotion (1 Week)", "amount": 4.99, "type": "promotion", "quantity": 1},
+    "live_30": {"name": "30 Min Live Pass", "amount": 1.99, "type": "live_time", "quantity": 30},
+    "live_60": {"name": "60 Min Live Pass", "amount": 3.99, "type": "live_time", "quantity": 60},
 }
 
 VIP_PASS_PRICE = 4.99

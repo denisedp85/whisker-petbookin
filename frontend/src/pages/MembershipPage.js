@@ -347,6 +347,8 @@ export default function MembershipPage() {
               { id: 'ai_10', name: '10 AI Generations', price: '$2.99', desc: 'Generate 10 more AI-powered pet bios', color: 'from-blue-500 to-cyan-500' },
               { id: 'ai_50', name: '50 AI Generations', price: '$9.99', desc: 'Bulk pack of 50 AI bio generations', color: 'from-purple-500 to-pink-500' },
               { id: 'promo_1', name: 'Post Promotion', price: '$4.99', desc: 'Promote one post for 1 week', color: 'from-amber-500 to-orange-500' },
+              { id: 'live_30', name: '30 Min Live Pass', price: '$1.99', desc: 'Extra 30 minutes of live streaming', color: 'from-red-500 to-rose-500' },
+              { id: 'live_60', name: '60 Min Live Pass', price: '$3.99', desc: 'Extra 60 minutes of live streaming', color: 'from-red-600 to-pink-500' },
             ].map((pack) => (
               <div key={pack.id} className="rounded-xl border border-border p-5 hover:shadow-md transition-all" data-testid={`pack-${pack.id}`}>
                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${pack.color} flex items-center justify-center mb-3`}>
