@@ -6,8 +6,9 @@ import PostCard from '../components/PostCard';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { PawPrint, Shield, Heart, Users, MapPin, Calendar, Weight, Activity, UserPlus, Check, Clock, Sparkles, Loader2 } from 'lucide-react';
+import { PawPrint, Shield, Heart, Users, MapPin, Calendar, Weight, Activity, UserPlus, Check, Clock, Sparkles, Loader2, Music, Volume2, VolumeX, Flag, Ban } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 export default function ProfilePage() {
   const { petId } = useParams();
@@ -18,6 +19,10 @@ export default function ProfilePage() {
   const [friendshipStatus, setFriendshipStatus] = useState({ status: 'none' });
   const [loading, setLoading] = useState(true);
   const [generatingBio, setGeneratingBio] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [audioRef] = useState({ current: null });
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
 
   const isOwner = pet?.owner_id === user?.user_id;
 
@@ -25,7 +30,7 @@ export default function ProfilePage() {
     try {
       const [petRes, postsRes, friendsRes] = await Promise.all([
         axios.get(`${API}/pets/${petId}`),
-        axios.get(`${API}/posts/pet/${petId}`),
+        axios.get(`${API}/pets/${petId}/posts`),
         axios.get(`${API}/friends/${petId}`)
       ]);
       setPet(petRes.data);
@@ -108,6 +113,50 @@ export default function ProfilePage() {
   }
 
   const owner = pet.owner;
+  const ownerTheme = owner?.profile_theme || {};
+  const bgImageUrl = ownerTheme.video_bg_url;
+  const musicUrl = ownerTheme.music_url;
+
+  const toggleMusic = () => {
+    if (!audioRef.current && musicUrl) {
+      audioRef.current = new Audio(musicUrl);
+      audioRef.current.loop = true;
+    }
+    if (musicPlaying) {
+      audioRef.current?.pause();
+      setMusicPlaying(false);
+    } else {
+      audioRef.current?.play().catch(() => {});
+      setMusicPlaying(true);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!owner?.user_id || owner.user_id === user?.user_id) return;
+    if (!window.confirm(`Block ${owner.name}? Their content will be hidden from your feed.`)) return;
+    try {
+      await axios.post(`${API}/users/block/${owner.user_id}`, {}, { headers: authHeaders() });
+      toast.success('User blocked');
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to block');
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) { toast.error('Please select a reason'); return; }
+    try {
+      await axios.post(`${API}/users/report`, {
+        report_type: 'user',
+        target_id: owner?.user_id,
+        reason: reportReason,
+      }, { headers: authHeaders() });
+      toast.success('Report submitted. Our team will review it.');
+      setShowReportModal(false);
+      setReportReason('');
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to report');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
@@ -116,12 +165,49 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6" data-testid="profile-header">
           {/* Cover */}
-          <div className="h-40 bg-gradient-to-r from-[#3b5998] to-[#4080ff] relative">
-            <div className="absolute inset-0 opacity-20" style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1623945514418-15427b33a34c?w=800')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }} />
+          <div className="h-40 relative overflow-hidden" style={{
+            background: bgImageUrl ? undefined : 'linear-gradient(to right, #3b5998, #4080ff)',
+          }}>
+            {bgImageUrl ? (
+              <img src={bgImageUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 opacity-20" style={{
+                backgroundImage: "url('https://images.unsplash.com/photo-1623945514418-15427b33a34c?w=800')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }} />
+            )}
+            {/* Music toggle */}
+            {musicUrl && (
+              <button
+                onClick={toggleMusic}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-colors"
+                data-testid="music-toggle"
+              >
+                {musicPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              </button>
+            )}
+            {/* Block/Report for non-owners */}
+            {!isOwner && owner && (
+              <div className="absolute top-3 left-3 flex gap-1.5">
+                <button
+                  onClick={handleBlock}
+                  className="w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-red-600/80 transition-colors"
+                  title="Block user"
+                  data-testid="block-user-btn"
+                >
+                  <Ban className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-amber-600/80 transition-colors"
+                  title="Report user"
+                  data-testid="report-user-btn"
+                >
+                  <Flag className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="px-6 pb-4 -mt-12 relative">
@@ -358,6 +444,33 @@ export default function ProfilePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
+          <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()} data-testid="report-modal">
+            <h3 className="font-semibold text-lg mb-4">Report {owner?.name || 'User'}</h3>
+            <div className="space-y-2 mb-4">
+              {['Spam or fake account', 'Harassment or bullying', 'Inappropriate content', 'Scam or fraud', 'Other'].map(reason => (
+                <button
+                  key={reason}
+                  onClick={() => setReportReason(reason)}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-colors ${
+                    reportReason === reason ? 'bg-primary/10 text-primary border border-primary/30' : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                  data-testid={`report-reason-${reason.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowReportModal(false)} className="flex-1 rounded-xl">Cancel</Button>
+              <Button onClick={handleReport} className="flex-1 rounded-xl bg-red-500 text-white hover:bg-red-600" data-testid="submit-report-btn">Submit Report</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

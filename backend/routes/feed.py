@@ -72,12 +72,25 @@ async def create_post(data: PostCreate, request: Request):
 async def get_posts(request: Request, page: int = 1, limit: int = 20):
     db = get_db(request)
     skip = (page - 1) * limit
-    # Promoted posts first, then by creation date
+
+    # Get blocked user IDs for current user
+    blocked_ids = []
+    try:
+        user = await get_current_user(request, db)
+        blocked = await db.blocked_users.find(
+            {"blocker_id": user["user_id"]}, {"_id": 0, "blocked_id": 1}
+        ).to_list(500)
+        blocked_ids = [b["blocked_id"] for b in blocked]
+    except Exception:
+        pass
+
+    query = {"author_id": {"$nin": blocked_ids}} if blocked_ids else {}
+
     posts = await db.posts.find(
-        {}, {"_id": 0}
+        query, {"_id": 0}
     ).sort([("is_promoted", -1), ("created_at", -1)]).skip(skip).limit(limit).to_list(limit)
 
-    total = await db.posts.count_documents({})
+    total = await db.posts.count_documents(query)
     return {
         "posts": posts,
         "total": total,

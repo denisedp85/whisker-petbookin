@@ -62,7 +62,8 @@ async def get_pet(pet_id: str, request: Request):
             "name": owner["name"],
             "picture": owner.get("picture", ""),
             "breeder_info": owner.get("breeder_info"),
-            "membership_tier": owner.get("membership_tier", "free")
+            "membership_tier": owner.get("membership_tier", "free"),
+            "profile_theme": owner.get("profile_theme", {})
         }
     return {**pet, "owner": owner_info}
 
@@ -113,3 +114,17 @@ async def upload_pet_photo(pet_id: str, request: Request, file: UploadFile = Fil
         {"$push": {"photos": photo_url}, "$set": {"updated_at": datetime.now(timezone.utc)}}
     )
     return {"photo_url": photo_url}
+
+
+
+@router.get("/{pet_id}/posts")
+async def get_pet_posts(pet_id: str, request: Request, page: int = 1, limit: int = 20):
+    """Get posts for a specific pet"""
+    db = get_db(request)
+    skip = (page - 1) * limit
+    
+    posts = await db.posts.find(
+        {"pet_id": pet_id}, {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    return posts

@@ -229,11 +229,10 @@ function ReportModal({ postId, onClose }) {
     if (!category) { toast.error('Please select a reason'); return; }
     setSubmitting(true);
     try {
-      await axios.post(`${API}/reports`, {
-        target_type: 'post',
+      await axios.post(`${API}/users/report`, {
+        report_type: 'post',
         target_id: postId,
         reason: categories.find(c => c.value === category)?.label || category,
-        category,
         details
       }, { headers: authHeaders() });
       toast.success('Report submitted. Our team will review it.');

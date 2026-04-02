@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles, Lock, Crown, LogOut } from 'lucide-react';
+import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles, Lock, Crown, LogOut, X } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker from '../components/EmojiPicker';
 import axios from 'axios';
@@ -240,32 +240,74 @@ export default function SettingsPage() {
                 <Sparkles className="w-4 h-4 inline mr-2 text-secondary" />
                 MySpace Vibes
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-5">
+                {/* Background Presets */}
                 <div>
-                  <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                    <Music className="w-3.5 h-3.5" /> Profile Music URL
+                  <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <Image className="w-3.5 h-3.5" /> Cover Background
                   </label>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {[
+                      { url: '', label: 'Default', gradient: 'bg-gradient-to-r from-[#3b5998] to-[#4080ff]' },
+                      { url: 'https://images.unsplash.com/photo-1655718568512-ace6b87166ac?w=800', label: 'Sunset' },
+                      { url: 'https://images.pexels.com/photos/7135013/pexels-photo-7135013.jpeg?auto=compress&w=800', label: 'Pastel' },
+                      { url: 'https://images.pexels.com/photos/6985277/pexels-photo-6985277.jpeg?auto=compress&w=800', label: 'Nature' },
+                      { url: 'https://images.unsplash.com/photo-1608220678046-22b22f2cde86?w=800', label: 'Tabby' },
+                      { url: 'https://images.unsplash.com/photo-1764660249067-e9ec85a2ff62?w=800', label: 'Corgi' },
+                      { url: 'https://images.pexels.com/photos/1931370/pexels-photo-1931370.jpeg?auto=compress&w=800', label: 'Buddies' },
+                      { url: 'https://images.pexels.com/photos/4587959/pexels-photo-4587959.jpeg?auto=compress&w=800', label: 'Cat' },
+                    ].map((bg, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setTheme({ ...theme, video_bg_url: bg.url })}
+                        className={`h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                          (theme.video_bg_url || '') === bg.url ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
+                        }`}
+                        data-testid={`bg-preset-${i}`}
+                      >
+                        {bg.url ? (
+                          <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className={`w-full h-full ${bg.gradient || 'bg-muted'} flex items-center justify-center`}>
+                            <span className="text-[9px] text-white font-medium">{bg.label}</span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                   <Input
-                    placeholder="https://example.com/song.mp3"
-                    value={theme.music_url || ''}
-                    onChange={(e) => setTheme({ ...theme, music_url: e.target.value })}
-                    className="rounded-xl"
-                    data-testid="music-url-input"
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-1">Visitors to your profile will hear this song</p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                    <Image className="w-3.5 h-3.5" /> Background Image URL
-                  </label>
-                  <Input
-                    placeholder="https://example.com/background.jpg"
+                    placeholder="Or paste a custom image URL..."
                     value={theme.video_bg_url || ''}
                     onChange={(e) => setTheme({ ...theme, video_bg_url: e.target.value })}
-                    className="rounded-xl"
+                    className="rounded-xl text-xs"
                     data-testid="bg-image-url-input"
                   />
                 </div>
+
+                {/* Profile Music */}
+                <div>
+                  <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <Music className="w-3.5 h-3.5" /> Profile Music
+                  </label>
+                  <p className="text-[10px] text-muted-foreground mb-2">Visitors will hear this when they view your pet's profile</p>
+                  <Input
+                    placeholder="Paste a music/audio URL (.mp3, .wav, etc.)"
+                    value={theme.music_url || ''}
+                    onChange={(e) => setTheme({ ...theme, music_url: e.target.value })}
+                    className="rounded-xl text-xs"
+                    data-testid="music-url-input"
+                  />
+                  {theme.music_url && (
+                    <div className="mt-2 p-2 rounded-lg bg-muted/50 flex items-center gap-2">
+                      <Music className="w-4 h-4 text-primary flex-shrink-0" />
+                      <audio controls src={theme.music_url} className="w-full h-8" style={{ minHeight: '32px' }} />
+                      <button onClick={() => setTheme({ ...theme, music_url: '' })} className="text-muted-foreground hover:text-destructive p-1">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   onClick={() => handleThemeUpdate(theme)}
                   className="rounded-full bg-primary text-white hover:bg-primary/90"
