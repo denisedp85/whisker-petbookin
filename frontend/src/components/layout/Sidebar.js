@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Home, Search, PawPrint, Shield, Settings, LogOut,
-  Users, Store, Gamepad2, Crown, MessageCircle, ChevronDown, ScrollText, MapPin, Bell, Gem, Radio
+  Users, Store, Gamepad2, Crown, MessageCircle, ChevronDown, ScrollText, MapPin, Bell, Gem, Radio, Trophy
 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import NotificationBell from './NotificationBell';
@@ -38,6 +38,7 @@ const navGroups = [
     items: [
       { to: '/marketplace', icon: Store, label: 'Marketplace' },
       { to: '/games', icon: Gamepad2, label: 'Games' },
+      { to: '/tournaments', icon: Trophy, label: 'Tournaments', badge: 'NEW' },
     ]
   },
 ];

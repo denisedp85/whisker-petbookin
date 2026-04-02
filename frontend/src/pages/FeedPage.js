@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
-import { Heart, MessageCircle, Send, Trash2, Trophy, Star, PawPrint, Video, Music, Type, Lock } from 'lucide-react';
+import { Heart, MessageCircle, Send, Trash2, Trophy, Star, PawPrint, Video, Music, Type, Lock, Flame, Sparkles, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker from '../components/EmojiPicker';
 import axios from 'axios';
@@ -92,6 +92,7 @@ export default function FeedPage() {
   const [comments, setComments] = useState({});
   const [showComments, setShowComments] = useState({});
   const [petOfWeek, setPetOfWeek] = useState(null);
+  const [topContributor, setTopContributor] = useState(null);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -112,7 +113,14 @@ export default function FeedPage() {
         if (res.data.pet) setPetOfWeek(res.data);
       } catch {}
     };
+    const fetchTopContrib = async () => {
+      try {
+        const res = await axios.get(`${API}/tournaments/top-contributor`, { headers: authHeaders() });
+        if (res.data.top_contributor) setTopContributor(res.data.top_contributor);
+      } catch {}
+    };
     fetchPOTW();
+    fetchTopContrib();
   }, [API, authHeaders]);
 
   const handlePost = async () => {
@@ -261,6 +269,34 @@ export default function FeedPage() {
                   <Heart className="w-4 h-4 fill-current" />
                   <span className="text-sm font-bold">{petOfWeek.post?.likes_count || 0}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Contributor of the Week */}
+        {topContributor && (
+          <div className="rounded-2xl border-2 border-amber-300/40 bg-gradient-to-r from-amber-50 via-white to-yellow-50 p-5 animate-fade-in-up" data-testid="feed-top-contributor">
+            <div className="flex items-center gap-2 mb-3">
+              <Flame className="w-5 h-5 text-amber-500" />
+              <span className="text-xs font-bold tracking-[0.15em] uppercase text-amber-600">Top Contributor</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-amber-300">
+                {topContributor.picture ? (
+                  <img src={topContributor.picture} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Crown className="w-7 h-7 text-amber-500" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-base" style={{ fontFamily: 'Outfit' }}>{topContributor.name}</h3>
+                <p className="text-sm text-muted-foreground">{topContributor.weekly_score} pts this week</p>
+              </div>
+              <div className="flex items-center gap-1 text-amber-600">
+                <Star className="w-5 h-5 fill-current" />
+                <span className="text-lg font-bold">#1</span>
               </div>
             </div>
           </div>

@@ -55,6 +55,7 @@ from routes.games import router as games_router
 from routes.uploads import router as uploads_router
 from routes.notifications import router as notifications_router
 from routes.live import router as live_router
+from routes.tournaments import router as tournaments_router
 
 api_router.include_router(auth_router)
 api_router.include_router(pets_router)
@@ -73,6 +74,7 @@ api_router.include_router(games_router)
 api_router.include_router(uploads_router)
 api_router.include_router(notifications_router)
 api_router.include_router(live_router)
+api_router.include_router(tournaments_router)
 
 app.include_router(api_router)
 
