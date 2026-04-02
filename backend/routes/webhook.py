@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from emergentintegrations.payments.stripe.checkout import StripeCheckout
 from datetime import datetime, timezone
 import os
+import uuid
 import logging
 
 router = APIRouter(tags=["webhook"])
@@ -143,6 +144,47 @@ async def stripe_webhook(request: Request):
                 "created_at": now,
             })
             logger.info(f"Webhook: Tip ${tip_usd} ({tip_points}pts) from {user_id} to {broadcaster_id}")
+
+        elif purchase_type == "marketplace":
+            listing_id = metadata.get("listing_id", "")
+            buyer_id = metadata.get("buyer_id", "")
+            seller_id = metadata.get("seller_id", "")
+
+            # Mark listing as sold
+            if listing_id:
+                await db.marketplace_listings.update_one(
+                    {"listing_id": listing_id},
+                    {"$set": {"status": "sold", "sold_to": buyer_id, "sold_at": now}}
+                )
+
+            # Credit seller balance
+            txn_data = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+            listing_title = txn_data.get("listing_title", "Item") if txn_data else "Item"
+            amount = txn_data.get("amount", 0) if txn_data else 0
+            seller_earnings = txn_data.get("seller_earnings", 0) if txn_data else 0
+
+            if seller_id and seller_earnings > 0:
+                await db.users.update_one(
+                    {"user_id": seller_id},
+                    {"$inc": {
+                        "seller_earnings": seller_earnings,
+                        "seller_balance": seller_earnings,
+                    }, "$set": {"updated_at": now}}
+                )
+
+            # Notify seller
+            if seller_id:
+                await db.notifications.insert_one({
+                    "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                    "user_id": seller_id,
+                    "type": "marketplace_sale",
+                    "title": "Item Sold!",
+                    "message": f'Your listing "{listing_title}" sold for ${amount:.2f}! You earned ${seller_earnings:.2f}.',
+                    "read": False,
+                    "created_at": now,
+                })
+
+            logger.info(f"Webhook: Marketplace sale listing={listing_id} buyer={buyer_id} seller={seller_id}")
 
         else:
             tier_id = metadata.get("tier_id")
