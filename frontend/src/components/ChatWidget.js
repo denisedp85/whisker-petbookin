@@ -401,6 +401,7 @@ export default function ChatWidget() {
       fetchGroups();
     }, 8000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchContacts, fetchConversations, fetchUnread]);
 
   const fetchGroups = useCallback(async () => {

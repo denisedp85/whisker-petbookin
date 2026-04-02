@@ -455,8 +455,10 @@ function BroadcasterView({ stream, user, API, authHeaders, onEnd }) {
     return () => {
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       if (wsRef.current) wsRef.current.close();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       Object.values(peerConnections.current).forEach(pc => pc.close());
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API, stream.stream_id, token]);
 
   // Timer
@@ -468,6 +470,7 @@ function BroadcasterView({ stream, user, API, authHeaders, onEnd }) {
       });
     }, 1000);
     return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-scroll chat
@@ -749,6 +752,7 @@ function ViewerView({ stream, user, API, authHeaders, onClose }) {
       if (wsRef.current) wsRef.current.close();
       if (pcRef.current) pcRef.current.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API, stream.stream_id, token]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);

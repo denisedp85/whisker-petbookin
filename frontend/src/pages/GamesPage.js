@@ -52,6 +52,7 @@ function TreatCatcher({ API, authHeaders, onDone, onBack }) {
         if (res.ok) onDone(await res.json());
       } catch {}
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameOver]);
 
   const catchTreat = (id) => {
@@ -148,6 +149,7 @@ function PetPuzzle({ API, authHeaders, onDone, onBack }) {
         if (res.ok) onDone(await res.json());
       } catch {}
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solved]);
 
   return (
@@ -207,6 +209,7 @@ function PetShow({ API, authHeaders, onDone, onBack }) {
     } else {
       setDone(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round]);
 
   useEffect(() => {
@@ -221,6 +224,7 @@ function PetShow({ API, authHeaders, onDone, onBack }) {
         if (res.ok) onDone(await res.json());
       } catch {}
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done]);
 
   const pick = (idx) => {
@@ -346,6 +350,7 @@ export default function GamesPage() {
     if (quizState && quizState.current >= quizState.questions?.length && !quizState.results) {
       submitQuiz();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizState?.current]);
 
   const tabs = [

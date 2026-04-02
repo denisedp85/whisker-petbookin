@@ -82,6 +82,11 @@ async def health_check():
     return {"status": "healthy", "app": "Petbookin"}
 
 
+@app.get("/health")
+async def health_check_root():
+    return {"status": "healthy", "app": "Petbookin"}
+
+
 # ─── WebSocket Signaling for Live Streams ───
 from routes.live import active_streams
 
