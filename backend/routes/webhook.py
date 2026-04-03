@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 async def stripe_webhook(request: Request):
     db = request.app.state.db
     api_key = os.environ["STRIPE_API_KEY"]
-    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
     host_url = str(request.base_url).rstrip("/")
     webhook_url = f"{host_url}/api/webhook/stripe"

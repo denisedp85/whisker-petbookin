@@ -74,7 +74,7 @@ function SellerDashboard({ API, authHeaders, connectStatus }) {
       try {
         const res = await axios.get(`${API}/marketplace/connect/sales`, { headers: authHeaders() });
         setSales(res.data);
-      } catch {}
+      } catch (e) { console.error(e); }
       setLoading(false);
     })();
   }, [API, authHeaders]);
@@ -131,7 +131,7 @@ function PurchaseSuccessModal({ sessionId, API, authHeaders, onClose }) {
         } else {
           setTimeout(poll, 2000);
         }
-      } catch {
+      } catch (e) {
         setTimeout(poll, 2000);
       }
     };
@@ -206,7 +206,7 @@ export default function MarketplacePage() {
     try {
       const res = await axios.get(`${API}/marketplace/connect/status`, { headers: authHeaders() });
       setConnectStatus(res.data);
-    } catch {}
+    } catch (e) { console.error(e); }
   }, [API, authHeaders]);
 
   const fetchListings = useCallback(async () => {
@@ -217,7 +217,7 @@ export default function MarketplacePage() {
       params.set('sort', sortBy);
       const res = await axios.get(`${API}/marketplace/listings?${params}`, { headers: authHeaders() });
       setListings(res.data.listings || []);
-    } catch {}
+    } catch (e) { console.error(e); }
     setLoading(false);
   }, [API, authHeaders, category, searchQuery, sortBy]);
 
@@ -272,7 +272,7 @@ export default function MarketplacePage() {
       await axios.delete(`${API}/marketplace/listings/${listingId}`, { headers: authHeaders() });
       toast.success('Listing deleted');
       fetchListings();
-    } catch {}
+    } catch (e) { console.error(e); }
   };
 
   const handleBuy = async (listing) => {

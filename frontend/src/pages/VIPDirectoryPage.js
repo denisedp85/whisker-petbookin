@@ -197,7 +197,7 @@ export default function VIPDirectoryPage() {
                     )}
                     <div className="flex flex-wrap gap-1 mt-2">
                       {(b.breeder_info?.specializations || []).slice(0, 4).map((s, i) => (
-                        <Badge key={i} variant="outline" className="text-[9px] py-0">{s}</Badge>
+                        <Badge key={`spec-${s}`} variant="outline" className="text-[9px] py-0">{s}</Badge>
                       ))}
                       {(b.breeder_info?.external_credentials || []).slice(0, 2).map((c, i) => (
                         <Badge key={`c-${i}`} className="bg-amber-50 text-amber-700 text-[9px] py-0">

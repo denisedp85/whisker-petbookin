@@ -43,7 +43,7 @@ export default function MyPetsPage() {
       await axios.delete(`${API}/pets/${petId}`, { headers: authHeaders() });
       toast.success('Pet removed');
       fetchPets();
-    } catch {}
+    } catch (e) { console.error(e); }
   };
 
   const handleGenerateBio = async (petId) => {

@@ -191,7 +191,7 @@ async def send_message(conv_id: str, data: SendMessage, request: Request):
                 db, pid, "message",
                 f"New message from {user['name']}",
                 data.content.strip()[:100],
-                link=f"/feed",
+                link="/feed",
                 icon="message"
             )
 

@@ -46,7 +46,7 @@ export default function SettingsPage() {
     try {
       await updateProfile(profileForm);
       toast.success('Profile updated!');
-    } catch {
+    } catch (e) {
       toast.error('Update failed');
     }
     setLoading(false);
@@ -58,7 +58,7 @@ export default function SettingsPage() {
       await axios.put(`${API}/auth/theme`, preset, { headers: authHeaders() });
       toast.success('Theme updated!');
       refreshUser();
-    } catch {
+    } catch (e) {
       toast.error('Theme update failed');
     }
   };
@@ -79,7 +79,7 @@ export default function SettingsPage() {
       await axios.put(`${API}/auth/theme`, updated, { headers: authHeaders() });
       refreshUser();
       toast.success('Uploaded and saved!');
-    } catch {
+    } catch (e) {
       toast.error('Upload failed');
     }
   };
@@ -89,7 +89,7 @@ export default function SettingsPage() {
     try {
       const res = await axios.get(`${API}/stripe/payment-history`, { headers: authHeaders() });
       setTransactions(res.data.transactions || []);
-    } catch {}
+    } catch (e) { console.error(e); }
     setTxnLoading(false);
   }, [API, authHeaders]);
 

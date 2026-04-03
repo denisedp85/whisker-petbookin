@@ -12,8 +12,8 @@ import os
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test credentials
-ADMIN_EMAIL = "admin@petbookin.com"
-ADMIN_PASSWORD = "PetbookinAdmin2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@petbookin.com")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "PetbookinAdmin2026!")
 
 # All species supported
 ALL_SPECIES = ['dog', 'cat', 'bird', 'horse', 'rabbit', 'reptile', 'fish', 'hamster', 'ferret', 'guinea_pig', 'exotic', 'other']

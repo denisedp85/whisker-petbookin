@@ -82,7 +82,7 @@ export default function MembershipPage() {
       }
       setPollingStatus(`Verifying payment... (attempt ${attempt + 1})`);
       setTimeout(() => pollPaymentStatus(sessionId, attempt + 1), 2500);
-    } catch {
+    } catch (e) {
       setPollingStatus(null);
       toast.error('Error checking payment status.');
     }
@@ -102,7 +102,7 @@ export default function MembershipPage() {
             setPollingStatus(null);
             toast.success('Subscription cancelled successfully');
             window.history.replaceState({}, '', '/membership');
-          } catch {
+          } catch (e) {
             setTimeout(() => pollCancel(attempt + 1), 2500);
           }
         };
@@ -120,7 +120,7 @@ export default function MembershipPage() {
         const res = await fetch(`${API}/stripe/trial-status`, { headers: authHeaders() });
         const data = await res.json();
         setTrialStatus(data);
-      } catch {}
+      } catch (e) { console.error(e); }
     };
     fetchTrial();
   }, [API, authHeaders]);

@@ -63,7 +63,15 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] Added "Data Management" tab in Admin Dashboard (Clean Up Test Data + Delete All Posts)
 - [x] Full E2E audit: signup, login, logout, post CRUD, admin, settings, map, marketplace, chat — ALL passing
 
-### Phase 17 - Theme, Upload, Chat Enhancement & Password Toggle (Apr 3, 2026)
+### Phase 18 - Code Quality Audit Fixes (Apr 3, 2026)
+- [x] Security: Replaced MD5 with SHA-256 in places.py cache key hashing
+- [x] Security: Moved hardcoded credentials to env vars in seed_admin.py and all test files
+- [x] Security: Fixed undefined variable safety in uploads.py (result initialization)
+- [x] Lint: Removed unused variables in admin.py (3) and webhook.py (1)
+- [x] Lint: Fixed f-strings without placeholders in seed_admin.py and chat.py
+- [x] React: Fixed empty catch blocks in 6 pages (added console.error logging)
+- [x] React: Replaced index-as-key with stable keys in 7 files (VIPDirectory, Tournaments, SignUp, Live, Games, PetbookinSeal)
+- [x] Note: React hooks deps reviewed - existing deps are correct (useState setters are stable refs)
 - [x] Theme presets now apply globally: AppLayout applies bg_color/video_bg_url, FeedPage applies card_bg/text_color/accent to cards
 - [x] Background presets auto-save on click (no more needing Save button)
 - [x] File upload buttons for backgrounds AND music (uses Emergent Object Storage)

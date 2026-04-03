@@ -212,7 +212,7 @@ export default function SignUpPage() {
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {form.pet_personality.map((t, i) => (
-                      <Badge key={i} className="bg-blue-50 text-[#3b5998] border-blue-200 gap-1">
+                      <Badge key={`feat-${i}-${Math.random().toString(36).slice(2,6)}`} className="bg-blue-50 text-[#3b5998] border-blue-200 gap-1">
                         {t}
                         <X className="w-3 h-3 cursor-pointer" onClick={() => update('pet_personality', form.pet_personality.filter((_, j) => j !== i))} />
                       </Badge>
@@ -227,7 +227,7 @@ export default function SignUpPage() {
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {form.pet_activities.map((a, i) => (
-                      <Badge key={i} className="bg-green-50 text-green-700 border-green-200 gap-1">
+                      <Badge key={`perk-${i}-${Math.random().toString(36).slice(2,6)}`} className="bg-green-50 text-green-700 border-green-200 gap-1">
                         {a}
                         <X className="w-3 h-3 cursor-pointer" onClick={() => update('pet_activities', form.pet_activities.filter((_, j) => j !== i))} />
                       </Badge>

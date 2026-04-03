@@ -48,7 +48,7 @@ def make_cache_key(lat, lng, place_type, radius):
     rounded_lat = round(lat, 2)
     rounded_lng = round(lng, 2)
     raw = f"{rounded_lat}:{rounded_lng}:{place_type}:{radius}"
-    return hashlib.md5(raw.encode()).hexdigest()
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 @router.get("/search")

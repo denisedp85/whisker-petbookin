@@ -52,7 +52,7 @@ function TopContributorBanner({ API, authHeaders }) {
       try {
         const res = await axios.get(`${API}/tournaments/top-contributor`, { headers: authHeaders() });
         if (res.data.top_contributor) setData(res.data);
-      } catch {}
+      } catch (e) { console.error(e); }
     })();
   }, [API, authHeaders]);
 
@@ -178,7 +178,7 @@ function EntriesList({ tournament, API, authHeaders, refreshParent }) {
     try {
       const res = await axios.get(`${API}/tournaments/${tournament.tournament_id}/entries`, { headers: authHeaders() });
       setEntries(res.data.entries || []);
-    } catch {}
+    } catch (e) { console.error(e); }
     setLoading(false);
   }, [API, authHeaders, tournament.tournament_id]);
 
@@ -255,7 +255,7 @@ function WeeklyLeaderboard({ API, authHeaders }) {
       try {
         const res = await axios.get(`${API}/tournaments/top-contributor`, { headers: authHeaders() });
         setData(res.data);
-      } catch {}
+      } catch (e) { console.error(e); }
       setLoading(false);
     })();
   }, [API, authHeaders]);
@@ -315,7 +315,7 @@ export default function TournamentsPage() {
     try {
       const res = await axios.get(`${API}/tournaments/active`, { headers: authHeaders() });
       setTournaments(res.data.tournaments || []);
-    } catch {}
+    } catch (e) { console.error(e); }
     setLoading(false);
   }, [API, authHeaders]);
 
@@ -327,7 +327,7 @@ export default function TournamentsPage() {
       ]);
       setPastTournaments(pastRes.data.tournaments || []);
       setHallOfFame(hofRes.data.champions || []);
-    } catch {}
+    } catch (e) { console.error(e); }
   }, [API, authHeaders]);
 
   useEffect(() => {
@@ -503,7 +503,7 @@ export default function TournamentsPage() {
                 ) : (
                   <div className="space-y-3">
                     {hallOfFame.map((champ, i) => (
-                      <div key={i} className="rounded-2xl border border-amber-200/50 bg-gradient-to-r from-amber-50/50 to-white p-4 flex items-center gap-4" data-testid={`champion-${i}`}>
+                      <div key={c?.user_id || `champ-${i}`} className="rounded-2xl border border-amber-200/50 bg-gradient-to-r from-amber-50/50 to-white p-4 flex items-center gap-4" data-testid={`champion-${i}`}>
                         <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-amber-300">
                           {champ.winner_picture ? (
                             <img src={champ.winner_picture} alt="" className="w-full h-full object-cover" />

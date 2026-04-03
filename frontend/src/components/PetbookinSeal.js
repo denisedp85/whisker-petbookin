@@ -12,7 +12,7 @@ export default function PetbookinSeal({ size = 180, variant = 'full' }) {
           const y1 = 100 + 94 * Math.sin(angle);
           const x2 = 100 + 88 * Math.cos(angle);
           const y2 = 100 + 88 * Math.sin(angle);
-          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#C6993A" strokeWidth="1.5" />;
+          return <line key={`line-${x1}-${y1}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#C6993A" strokeWidth="1.5" />;
         })}
         <circle cx="100" cy="100" r="86" stroke="#C6993A" strokeWidth="2" fill="none" />
         <circle cx="100" cy="100" r="82" stroke="#C6993A" strokeWidth="0.5" fill="none" />
@@ -64,7 +64,7 @@ export default function PetbookinSeal({ size = 180, variant = 'full' }) {
         const angle = (i * 10) * Math.PI / 180;
         const x = 100 + 92 * Math.cos(angle);
         const y = 100 + 92 * Math.sin(angle);
-        return <circle key={i} cx={x} cy={y} r="1.2" fill="#FF7A6A" opacity="0.5" />;
+        return <circle key={`dot-${x}-${y}`} cx={x} cy={y} r="1.2" fill="#FF7A6A" opacity="0.5" />;
       })}
       <circle cx="100" cy="100" r="60" stroke="#FF7A6A" strokeWidth="1" fill="none" opacity="0.3" />
       <ellipse cx="100" cy="108" rx="14" ry="12" fill="#FF7A6A" />

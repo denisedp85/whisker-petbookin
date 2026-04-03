@@ -659,7 +659,7 @@ function BroadcasterView({ stream, user, API, authHeaders, onEnd }) {
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
             {chatMessages.map((m, i) => (
-              <div key={i} className={`text-xs ${m.system ? 'text-muted-foreground italic text-center' : ''}`}>
+              <div key={m.id || `msg-${i}-${m.user}`} className={`text-xs ${m.system ? 'text-muted-foreground italic text-center' : ''}`}>
                 {!m.system && <span className="font-semibold text-primary mr-1">{m.sender_name}:</span>}
                 {m.message}
               </div>
@@ -937,7 +937,7 @@ function ViewerView({ stream, user, API, authHeaders, onClose }) {
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
             {chatMessages.map((m, i) => (
-              <div key={i} className={`text-xs ${m.system ? 'text-muted-foreground italic text-center' : ''}`}>
+              <div key={m.id || `msg-${i}-${m.user}`} className={`text-xs ${m.system ? 'text-muted-foreground italic text-center' : ''}`}>
                 {!m.system && <span className="font-semibold text-primary mr-1">{m.sender_name}:</span>}
                 {m.message}
               </div>

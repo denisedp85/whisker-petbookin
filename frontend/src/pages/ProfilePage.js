@@ -486,7 +486,7 @@ function StorageImage({ path, alt, className }) {
           const blob = await res.blob();
           setUrl(URL.createObjectURL(blob));
         }
-      } catch {}
+      } catch (e) { console.error(e); }
     };
     if (path) load();
   }, [path]);

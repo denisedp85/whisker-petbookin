@@ -10,8 +10,8 @@ import time
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test credentials
-ADMIN_EMAIL = "admin@petbookin.com"
-ADMIN_PASSWORD = "PetbookinAdmin2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@petbookin.com")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "PetbookinAdmin2026!")
 
 # Tier configurations
 TIER_PACKAGES = {

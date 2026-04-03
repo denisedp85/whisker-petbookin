@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Admin credentials
-ADMIN_EMAIL = "admin@petbookin.com"
-ADMIN_PASSWORD = "Admin123!Petbookin"
-ADMIN_NAME = "Petbookin Admin"
+# Admin credentials from environment
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@petbookin.com")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "PetbookinAdmin2026!")
+ADMIN_NAME = os.environ.get("ADMIN_NAME", "Petbookin Admin")
 
 async def seed_admin():
     """Create admin user if it doesn't exist"""
@@ -88,10 +88,10 @@ async def seed_admin():
             }
             
             await db.users.insert_one(admin_user)
-            print(f"✅ Admin user created successfully!")
+            print("✅ Admin user created successfully!")
             print(f"📧 Email: {ADMIN_EMAIL}")
             print(f"🔑 Password: {ADMIN_PASSWORD}")
-            print(f"\n⚠️  IMPORTANT: Change this password after first login!")
+            print("\n⚠️  IMPORTANT: Change this password after first login!")
         
         client.close()
         

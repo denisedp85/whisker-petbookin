@@ -489,7 +489,7 @@ export default function GamesPage() {
                 <p className="text-primary font-bold text-lg mt-1">+{quizState.results.points_earned} points</p>
                 <div className="mt-6 space-y-2 text-left max-w-md mx-auto">
                   {quizState.results.results.map((r, i) => (
-                    <div key={i} className={`flex items-center gap-2 p-3 rounded-xl text-sm ${r.is_correct ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <div key={`result-${i}-${r.question?.slice(0,10)}`} className={`flex items-center gap-2 p-3 rounded-xl text-sm ${r.is_correct ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
                       {r.is_correct ? <Check className="w-4 h-4 text-green-600 flex-shrink-0" /> : <X className="w-4 h-4 text-red-500 flex-shrink-0" />}
                       <span className="truncate">{r.question}</span>
                     </div>

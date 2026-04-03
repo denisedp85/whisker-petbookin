@@ -62,7 +62,7 @@ async def get_stats(request: Request):
 
 @router.post("/assign-role")
 async def assign_role(data: RoleAssign, request: Request):
-    admin = await require_admin(request)
+    await require_admin(request)
     db = get_db(request)
 
     # Check built-in roles first, then custom roles
@@ -97,7 +97,7 @@ async def assign_role(data: RoleAssign, request: Request):
 
 @router.post("/assign-tier")
 async def assign_tier(data: TierAssign, request: Request):
-    admin = await require_admin(request)
+    await require_admin(request)
     db = get_db(request)
 
     if data.tier not in VALID_TIERS:
@@ -120,7 +120,7 @@ async def assign_tier(data: TierAssign, request: Request):
 
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: str, request: Request):
-    admin = await require_admin(request)
+    await require_admin(request)
     db = get_db(request)
 
     target = await db.users.find_one({"user_id": user_id}, {"_id": 0})

@@ -75,11 +75,15 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     file_id = uuid.uuid4().hex[:16]
     path = f"{APP_NAME}/uploads/{user['user_id']}/{file_id}.{ext}"
 
+    result = None
     try:
         result = put_object(path, data, content_type)
     except Exception as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail="Upload failed")
+
+    if not result or "path" not in result:
+        raise HTTPException(status_code=500, detail="Upload returned invalid response")
 
     now = datetime.now(timezone.utc)
     file_doc = {
