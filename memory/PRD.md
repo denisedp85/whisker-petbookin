@@ -57,6 +57,12 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] dedape1985@gmail.com permanently deleted from system (startup script + DB cleanup)
 - [x] Stripe live keys updated in preview .env
 
+### Phase 16 - Comprehensive Audit & Post Deletion Fix (Apr 3, 2026)
+- [x] Fixed PostCard.js: changed owner_id to author_id (delete button was NEVER showing)
+- [x] Added admin check to PostCard delete visibility (admins can now delete any post)
+- [x] Added "Data Management" tab in Admin Dashboard (Clean Up Test Data + Delete All Posts)
+- [x] Full E2E audit: signup, login, logout, post CRUD, admin, settings, map, marketplace, chat — ALL passing
+
 ## Remaining Backlog
 
 ### P1 - Go Live Deployment
