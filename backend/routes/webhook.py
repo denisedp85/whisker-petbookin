@@ -185,6 +185,19 @@ async def stripe_webhook(request: Request):
 
             logger.info(f"Webhook: Marketplace sale listing={listing_id} buyer={buyer_id} seller={seller_id}")
 
+        elif metadata.get("type") == "coin_purchase":
+            coins = int(metadata.get("coins", "0"))
+            if coins > 0:
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {"$inc": {"coins": coins}, "$set": {"updated_at": now}}
+                )
+                await db.coin_purchases.update_one(
+                    {"stripe_session_id": session_id},
+                    {"$set": {"status": "completed", "completed_at": now}}
+                )
+                logger.info(f"Webhook: User {user_id} purchased {coins} coins")
+
         else:
             tier_id = metadata.get("tier_id")
             if tier_id:

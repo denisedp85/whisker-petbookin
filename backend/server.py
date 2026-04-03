@@ -53,6 +53,7 @@ from routes.chat import router as chat_router
 from routes.marketplace import router as marketplace_router
 from routes.marketplace_payments import router as marketplace_payments_router
 from routes.games import router as games_router
+from routes.games_coins import router as games_coins_router
 from routes.uploads import router as uploads_router
 from routes.notifications import router as notifications_router
 from routes.live import router as live_router
@@ -75,6 +76,7 @@ api_router.include_router(chat_router)
 api_router.include_router(marketplace_router)
 api_router.include_router(marketplace_payments_router)
 api_router.include_router(games_router)
+api_router.include_router(games_coins_router)
 api_router.include_router(uploads_router)
 api_router.include_router(notifications_router)
 api_router.include_router(live_router)

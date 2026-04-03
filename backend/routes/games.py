@@ -13,6 +13,9 @@ GAMES = [
     {"game_id": "treat_catcher", "name": "Treat Catcher", "description": "Catch falling treats before they hit the ground!", "icon": "target", "points_per_win": 15, "category": "arcade"},
     {"game_id": "pet_puzzle", "name": "Pet Puzzle", "description": "Solve adorable pet puzzles as fast as you can!", "icon": "puzzle", "points_per_win": 20, "category": "puzzle"},
     {"game_id": "pet_show", "name": "Pet Show Champion", "description": "Score pets in the ultimate pet show competition!", "icon": "trophy", "points_per_win": 25, "category": "competition"},
+    {"game_id": "paw_match", "name": "Paw Match", "description": "Match 3 pet treats in a row! Candy Crush meets pet world!", "icon": "puzzle", "points_per_win": 25, "category": "arcade"},
+    {"game_id": "pet_memory", "name": "Pet Memory", "description": "Flip cards and match pet breed pairs before time runs out!", "icon": "brain", "points_per_win": 20, "category": "memory"},
+    {"game_id": "word_scramble", "name": "Breed Scramble", "description": "Unscramble the letters to guess the pet breed!", "icon": "brain", "points_per_win": 20, "category": "trivia"},
 ]
 
 BREED_QUIZ_QUESTIONS = [

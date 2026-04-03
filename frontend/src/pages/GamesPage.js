@@ -3,9 +3,12 @@ import { useAuth } from '../contexts/AuthContext';
 import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Gamepad2, Trophy, Brain, Target, Puzzle, Calendar, Flame, Star, ArrowRight, Check, X } from 'lucide-react';
+import { Gamepad2, Trophy, Brain, Target, Puzzle, Calendar, Flame, Star, ArrowRight, Check, X, Heart, Coins, ShoppingCart, Award, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import PetMemory from '../components/games/PetMemory';
+import WordScramble from '../components/games/WordScramble';
+import PawMatch from '../components/games/PawMatch';
 
 const GAME_ICONS = { brain: Brain, target: Target, puzzle: Puzzle, trophy: Trophy };
 
@@ -356,7 +359,78 @@ export default function GamesPage() {
   const tabs = [
     { id: 'games', label: 'Games', icon: Gamepad2 },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+    { id: 'awards', label: 'Weekly Awards', icon: Award },
+    { id: 'shop', label: 'Coin Shop', icon: Coins },
   ];
+
+  // Lives & coins state
+  const [livesData, setLivesData] = useState(null);
+  const [coinPackages, setCoinPackages] = useState([]);
+  const [weeklyAwards, setWeeklyAwards] = useState(null);
+
+  const fetchLives = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/games/lives`, { headers: authHeaders() });
+      setLivesData(res.data);
+    } catch (e) { console.error(e); }
+  }, [API, authHeaders]);
+
+  const fetchCoinPackages = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/games/coin-packages`, { headers: authHeaders() });
+      setCoinPackages(res.data.packages || []);
+    } catch (e) { console.error(e); }
+  }, [API, authHeaders]);
+
+  const fetchWeeklyAwards = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/games/weekly-awards`, { headers: authHeaders() });
+      setWeeklyAwards(res.data);
+    } catch (e) { console.error(e); }
+  }, [API, authHeaders]);
+
+  useEffect(() => { fetchLives(); fetchCoinPackages(); fetchWeeklyAwards(); }, [fetchLives, fetchCoinPackages, fetchWeeklyAwards]);
+
+  const consumeLife = async () => {
+    try {
+      const res = await axios.post(`${API}/games/use-life`, {}, { headers: authHeaders() });
+      setLivesData(prev => ({ ...prev, lives: res.data.lives }));
+      return true;
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'No lives remaining!');
+      return false;
+    }
+  };
+
+  const buyLife = async () => {
+    try {
+      const res = await axios.post(`${API}/games/buy-life`, {}, { headers: authHeaders() });
+      setLivesData(prev => ({ ...prev, lives: res.data.lives }));
+      toast.success(`Life purchased! (${res.data.coins} coins left)`);
+      refreshUser();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Not enough coins');
+    }
+  };
+
+  const buyCoins = async (packageId) => {
+    try {
+      const res = await axios.post(`${API}/games/buy-coins/${packageId}`, {}, { headers: authHeaders() });
+      if (res.data.checkout_url) {
+        window.location.href = res.data.checkout_url;
+      }
+    } catch (e) {
+      toast.error('Checkout failed');
+    }
+  };
+
+  const startGameWithLife = async (gameId) => {
+    const ok = await consumeLife();
+    if (ok) {
+      if (gameId === 'breed_quiz') { startQuiz(); }
+      else { setActiveGame(gameId); setGameResult(null); }
+    }
+  };
 
   return (
     <AppLayout>
@@ -369,6 +443,42 @@ export default function GamesPage() {
             <span className="text-xs text-muted-foreground">pts</span>
           </div>
         </div>
+
+        {/* Lives & Coins Bar */}
+        {livesData && (
+          <div className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between flex-wrap gap-3" data-testid="lives-bar">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-red-500 fill-red-500" />
+                <div className="flex gap-0.5">
+                  {Array.from({ length: livesData.max_lives }).map((_, i) => (
+                    <div key={`life-${i}`} className={`w-3 h-3 rounded-full transition-all ${i < livesData.lives ? 'bg-red-500' : 'bg-muted'}`} />
+                  ))}
+                </div>
+                <span className="text-xs font-medium">{livesData.lives}/{livesData.max_lives}</span>
+                {livesData.lives < livesData.max_lives && livesData.minutes_until_next > 0 && (
+                  <span className="text-[10px] text-muted-foreground">Next in {livesData.minutes_until_next}m</span>
+                )}
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-1.5">
+                <Coins className="w-5 h-5 text-yellow-500" />
+                <span className="font-bold text-sm">{user?.coins || 0}</span>
+                <span className="text-[10px] text-muted-foreground">coins</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {livesData.lives === 0 && (
+                <Button onClick={buyLife} size="sm" variant="outline" className="rounded-full text-xs gap-1.5" data-testid="buy-life-btn">
+                  <Heart className="w-3 h-3" /> Buy Life (20 coins)
+                </Button>
+              )}
+              <Button onClick={() => setActiveTab('shop')} size="sm" variant="outline" className="rounded-full text-xs gap-1.5" data-testid="go-to-shop-btn">
+                <ShoppingCart className="w-3 h-3" /> Coin Shop
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Daily Check-in */}
         {checkinStatus && (
@@ -437,11 +547,11 @@ export default function GamesPage() {
                         </div>
                       </div>
                       {g.game_id === 'breed_quiz' ? (
-                        <Button onClick={startQuiz} className="w-full mt-4 rounded-full bg-primary text-white hover:bg-primary/90 text-xs" data-testid="play-breed-quiz">
+                        <Button onClick={() => startGameWithLife('breed_quiz')} className="w-full mt-4 rounded-full bg-primary text-white hover:bg-primary/90 text-xs" data-testid="play-breed-quiz">
                           Play Now <ArrowRight className="w-3.5 h-3.5 ml-1" />
                         </Button>
                       ) : (
-                        <Button onClick={() => { setActiveGame(g.game_id); setGameResult(null); }} className="w-full mt-4 rounded-full bg-primary text-white hover:bg-primary/90 text-xs" data-testid={`play-${g.game_id}`}>
+                        <Button onClick={() => startGameWithLife(g.game_id)} className="w-full mt-4 rounded-full bg-primary text-white hover:bg-primary/90 text-xs" data-testid={`play-${g.game_id}`}>
                           Play Now <ArrowRight className="w-3.5 h-3.5 ml-1" />
                         </Button>
                       )}
@@ -508,7 +618,16 @@ export default function GamesPage() {
             {activeTab === 'games' && activeGame === 'pet_puzzle' && <PetPuzzle API={API} authHeaders={authHeaders} onDone={(result) => { setGameResult(result); setActiveGame(null); refreshUser(); fetchData(); }} onBack={() => setActiveGame(null)} />}
 
             {/* Pet Show Game */}
-            {activeTab === 'games' && activeGame === 'pet_show' && <PetShow API={API} authHeaders={authHeaders} onDone={(result) => { setGameResult(result); setActiveGame(null); refreshUser(); fetchData(); }} onBack={() => setActiveGame(null)} />}
+            {activeTab === 'games' && activeGame === 'pet_show' && <PetShow API={API} authHeaders={authHeaders} onDone={(result) => { setGameResult(result); setActiveGame(null); refreshUser(); fetchData(); fetchLives(); }} onBack={() => setActiveGame(null)} />}
+
+            {/* Paw Match Game */}
+            {activeTab === 'games' && activeGame === 'paw_match' && <PawMatch API={API} authHeaders={authHeaders} onDone={(result) => { setGameResult(result); setActiveGame(null); refreshUser(); fetchData(); fetchLives(); }} onBack={() => setActiveGame(null)} />}
+
+            {/* Pet Memory Game */}
+            {activeTab === 'games' && activeGame === 'pet_memory' && <PetMemory API={API} authHeaders={authHeaders} onDone={(result) => { setGameResult(result); setActiveGame(null); refreshUser(); fetchData(); fetchLives(); }} onBack={() => setActiveGame(null)} />}
+
+            {/* Word Scramble Game */}
+            {activeTab === 'games' && activeGame === 'word_scramble' && <WordScramble API={API} authHeaders={authHeaders} onDone={(result) => { setGameResult(result); setActiveGame(null); refreshUser(); fetchData(); fetchLives(); }} onBack={() => setActiveGame(null)} />}
 
             {/* Game Result */}
             {gameResult && !activeGame && (
@@ -551,6 +670,93 @@ export default function GamesPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Weekly Awards */}
+            {activeTab === 'awards' && (
+              <div className="space-y-6" data-testid="weekly-awards">
+                <div className="rounded-2xl border-2 border-secondary/30 bg-gradient-to-r from-secondary/5 to-primary/5 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Crown className="w-6 h-6 text-secondary" />
+                    <h2 className="font-bold text-lg" style={{ fontFamily: 'Outfit' }}>This Week's Champions</h2>
+                  </div>
+                  {weeklyAwards?.current_week?.length > 0 ? (
+                    <div className="space-y-3">
+                      {weeklyAwards.current_week.map((w, i) => (
+                        <div key={w.user_id} className={`flex items-center gap-4 p-4 rounded-xl ${
+                          i === 0 ? 'bg-secondary/10 border-2 border-secondary/30' : i === 1 ? 'bg-gray-100 border border-gray-200' : i === 2 ? 'bg-amber-50 border border-amber-200' : 'bg-card border border-border'
+                        }`} data-testid={`award-rank-${i + 1}`}>
+                          <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                            i === 0 ? 'bg-secondary text-white text-lg' : i === 1 ? 'bg-gray-300 text-gray-700' : i === 2 ? 'bg-amber-200 text-amber-800' : 'bg-muted text-muted-foreground text-sm'
+                          }`}>
+                            {i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                          </span>
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm">{w.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{w.games_played} games played</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-primary">{w.weekly_points} pts</p>
+                            {i < 3 && <Badge className="text-[9px] bg-secondary/10 text-secondary mt-0.5">Champion</Badge>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground py-8">No games played this week yet. Be the first!</p>
+                  )}
+                </div>
+
+                {weeklyAwards?.previous_awards?.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-card p-6">
+                    <h3 className="font-semibold mb-4" style={{ fontFamily: 'Outfit' }}>Previous Winners</h3>
+                    <div className="space-y-3">
+                      {weeklyAwards.previous_awards.map((a, i) => (
+                        <div key={a.week_ending || `prev-${i}`} className="flex items-center justify-between p-3 rounded-xl border border-border text-sm">
+                          <span className="text-muted-foreground">{a.week_ending}</span>
+                          <span className="font-medium">{a.winner_name}</span>
+                          <Badge variant="outline">{a.points} pts</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Coin Shop */}
+            {activeTab === 'shop' && (
+              <div className="space-y-6" data-testid="coin-shop">
+                <div className="rounded-2xl border border-border bg-card p-6 text-center">
+                  <Coins className="w-10 h-10 text-yellow-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold">{user?.coins || 0} Coins</p>
+                  <p className="text-xs text-muted-foreground mt-1">Use coins to buy extra lives and power-ups</p>
+                </div>
+
+                <h3 className="font-semibold" style={{ fontFamily: 'Outfit' }}>Buy Coins</h3>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {coinPackages.map(pkg => (
+                    <div key={pkg.package_id} className="rounded-2xl border-2 border-border bg-card p-6 text-center hover:border-primary/50 hover:shadow-md transition-all" data-testid={`coin-pkg-${pkg.package_id}`}>
+                      <Coins className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                      <p className="font-bold text-lg">{pkg.label}</p>
+                      <p className="text-2xl font-bold text-primary mt-1">${(pkg.stripe_amount / 100).toFixed(2)}</p>
+                      <Button onClick={() => buyCoins(pkg.package_id)} className="w-full mt-4 rounded-full bg-primary text-white hover:bg-primary/90 text-xs" data-testid={`buy-${pkg.package_id}`}>
+                        Purchase
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl border border-border bg-card p-6">
+                  <h3 className="font-semibold mb-3" style={{ fontFamily: 'Outfit' }}>What can coins buy?</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 text-sm">
+                      <div className="flex items-center gap-2"><Heart className="w-4 h-4 text-red-500" /> Extra Life</div>
+                      <span className="font-bold">20 coins</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </>
