@@ -215,7 +215,7 @@ export default function MapPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" /> Showing results near <span className="font-medium text-foreground">{locationName}</span>
-              {places.length > 0 && <Badge variant="outline" className="ml-2 text-[10px]">{places.length} found</Badge>}
+              {places.length > 0 && <span className="ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold">{places.length} found</span>}
             </p>
             {coords && (
               <Button

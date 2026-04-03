@@ -19,3 +19,6 @@
 
 ## Google Auth
 - Uses Emergent-managed OAuth (no GOOGLE_CLIENT_ID/SECRET needed)
+
+## Deleted Accounts
+- dedape1985@gmail.com — permanently removed from system (Apr 3, 2026)

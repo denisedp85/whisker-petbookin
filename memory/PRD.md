@@ -49,10 +49,18 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] Logout button on Settings page Account tab
 - [x] Profile page block/report buttons for non-owners
 
+### Phase 15 - Bug Fixes (Apr 3, 2026)
+- [x] Chat widget drag fix (useRef-based stable event handlers, didDrag prevents click-after-drag)
+- [x] Map data expanded (added 6 new OSM tags, result limit 50→500, radius 15km→25km, cache 24h→6h)
+- [x] New "Pet-Friendly" place category + Refresh button on map
+- [x] Stale places cache auto-cleared on startup
+- [x] dedape1985@gmail.com permanently deleted from system (startup script + DB cleanup)
+- [x] Stripe live keys updated in preview .env
+
 ## Remaining Backlog
 
 ### P1 - Go Live Deployment
-- [ ] Deploy to petbookin.com (DNS configured, fix ENABLE_HEALTH_CHECK + Stripe live keys)
+- [ ] Deploy to petbookin.com (user to update Deployment Secrets with live Stripe keys and hit Re-Deploy)
 
 ### P2 - Future Ideas
 - [ ] Push notifications (browser)
