@@ -9,11 +9,6 @@
 - Is Seller: Yes
 - Breeder ID: PBK-BR-93443891
 
-## User's Personal Email (deployed site)
-- Email: dedape1985@gmail.com
-- Role: owner (auto-upgraded on startup)
-- Tier: mega
-
 ## Test Users (created during testing)
 - Email: testuser_profile@test.com / Test1234! (has a test pet)
 

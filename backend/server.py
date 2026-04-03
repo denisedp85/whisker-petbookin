@@ -286,11 +286,17 @@ async def seed_admin():
         })
         logger.info("Admin seeded: admin@petbookin.com")
 
-    # Also upgrade dedape1985@gmail.com if exists
+    # Delete dedape1985@gmail.com if it exists (account permanently removed)
     dedape = await db.users.find_one({"email": "dedape1985@gmail.com"}, {"_id": 0})
     if dedape:
-        await db.users.update_one(
-            {"email": "dedape1985@gmail.com"},
-            {"$set": {**admin_fields, "updated_at": datetime.now(timezone.utc)}}
-        )
-        logger.info("Admin user dedape1985@gmail.com upgraded to owner/mega")
+        user_id = dedape.get("user_id")
+        await db.users.delete_one({"email": "dedape1985@gmail.com"})
+        if user_id:
+            await db.pets.delete_many({"owner_id": user_id})
+            await db.posts.delete_many({"author_id": user_id})
+            await db.notifications.delete_many({"$or": [{"user_id": user_id}, {"from_user_id": user_id}]})
+            await db.conversations.delete_many({"participants": user_id})
+            await db.messages.delete_many({"sender_id": user_id})
+            await db.blocked_users.delete_many({"$or": [{"blocker_id": user_id}, {"blocked_id": user_id}]})
+            await db.reports.delete_many({"reporter_id": user_id})
+        logger.info("Account dedape1985@gmail.com permanently deleted")
