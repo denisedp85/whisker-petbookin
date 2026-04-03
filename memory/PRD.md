@@ -97,7 +97,7 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 ## Remaining Backlog
 
 ### P1 - Go Live Deployment
-- [ ] Deploy to petbookin.com (user to update Deployment Secrets with live Stripe keys and hit Re-Deploy)
+- [ ] Deploy to petbookin.com (user to hit Re-Deploy — all fixes are in codebase, awaiting user redeployment)
 
 ### P2 - Future Ideas
 - [ ] Push notifications (browser)
