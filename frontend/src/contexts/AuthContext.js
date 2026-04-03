@@ -23,7 +23,6 @@ export function AuthProvider({ children }) {
     try {
       const res = await axios.get(`${API}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true
       });
       setUser(res.data);
     } catch {
@@ -87,7 +86,7 @@ export function AuthProvider({ children }) {
   };
 
   const processGoogleSession = async (sessionId) => {
-    const res = await axios.post(`${API}/auth/google-session`, { session_id: sessionId }, { withCredentials: true });
+    const res = await axios.post(`${API}/auth/google-session`, { session_id: sessionId });
     const { token: newToken, session_token, user: userData } = res.data;
     localStorage.setItem('petbookin_token', session_token || newToken);
     setToken(session_token || newToken);
@@ -97,7 +96,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true, headers: authHeaders() });
+      await axios.post(`${API}/auth/logout`, {},  { headers: authHeaders() });
     } catch {}
     localStorage.removeItem('petbookin_token');
     setToken(null);
@@ -116,10 +115,9 @@ export function AuthProvider({ children }) {
     try {
       const res = await axios.get(`${API}/auth/me`, {
         headers: authHeaders(),
-        withCredentials: true
       });
       setUser(res.data);
-    } catch {}
+    } catch (e) { console.error(e); }
   };
 
   return (

@@ -73,7 +73,12 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] React: Replaced index-as-key with stable keys in 7 files (VIPDirectory, Tournaments, SignUp, Live, Games, PetbookinSeal)
 - [x] Note: React hooks deps reviewed - existing deps are correct (useState setters are stable refs)
 
-### Phase 19 - Games Expansion, Lives & Coin System (Apr 3, 2026)
+### Phase 20 - CRITICAL: CORS/Login Fix for Live Site (Apr 3, 2026)
+- [x] Root cause found: `withCredentials: true` in AuthContext.js caused CORS failure on live site
+- [x] Browser blocked requests because `Access-Control-Allow-Origin: *` + credentials mode = spec violation
+- [x] Removed all `withCredentials: true` from axios calls (not needed for Bearer token auth)
+- [x] Set `allow_credentials=False` in CORS middleware (we use Authorization header, not cookies)
+- [x] Production build verified passing with `craco build`
 - [x] 3 new games: Paw Match (match-3, 7x7 grid, 60s timer), Pet Memory (12-card flip), Breed Scramble (5-word rounds)
 - [x] Lives system: 5 max lives, regenerate 1 every 30 min, each game costs 1 life
 - [x] Coin system: earn from games, spend on extra lives (20 coins each)
