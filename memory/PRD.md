@@ -63,6 +63,15 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] Added "Data Management" tab in Admin Dashboard (Clean Up Test Data + Delete All Posts)
 - [x] Full E2E audit: signup, login, logout, post CRUD, admin, settings, map, marketplace, chat — ALL passing
 
+### Phase 17 - Theme, Upload, Chat Enhancement & Password Toggle (Apr 3, 2026)
+- [x] Theme presets now apply globally: AppLayout applies bg_color/video_bg_url, FeedPage applies card_bg/text_color/accent to cards
+- [x] Background presets auto-save on click (no more needing Save button)
+- [x] File upload buttons for backgrounds AND music (uses Emergent Object Storage)
+- [x] URL inputs auto-save on blur
+- [x] Password visibility toggle (Eye/EyeOff) on login and signup forms
+- [x] Chat widget enhanced: Tab Bar mode, Floating Bubble mode, Lock/Unlock position, Snap to corners (BR/BL/TR/TL)
+- [x] Chat settings persist in localStorage
+
 ## Remaining Backlog
 
 ### P1 - Go Live Deployment
