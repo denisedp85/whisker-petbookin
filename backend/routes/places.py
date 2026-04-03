@@ -8,15 +8,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/places", tags=["Places"])
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-CACHE_HOURS = 24
+CACHE_HOURS = 6
 
 PLACE_TYPES = {
     "vet": [
         '["amenity"="veterinary"]',
         '["healthcare"="veterinary"]',
+        '["shop"="veterinary"]',
+        '["amenity"="animal_shelter"]',
+        '["healthcare:speciality"="veterinary"]',
     ],
     "pet_store": [
         '["shop"="pet"]',
+        '["shop"="pet_supply"]',
+        '["shop"="animal_feed"]',
     ],
     "dog_park": [
         '["leisure"="dog_park"]',
@@ -25,9 +30,16 @@ PLACE_TYPES = {
     "groomer": [
         '["shop"="pet_grooming"]',
         '["craft"="pet_grooming"]',
+        '["amenity"="pet_grooming"]',
     ],
     "park": [
         '["leisure"="park"]',
+    ],
+    "pet_friendly": [
+        '["dog"="yes"]',
+        '["pets"="yes"]',
+        '["pet"="yes"]',
+        '["animals"="yes"]',
     ],
 }
 
@@ -45,7 +57,8 @@ async def search_places(
     lat: float = Query(...),
     lng: float = Query(...),
     type: str = Query("vet"),
-    radius: int = Query(15000),
+    radius: int = Query(25000),
+    refresh: bool = Query(False),
 ):
     """Search for pet-friendly places near coordinates using OpenStreetMap"""
     db = request.app.state.db
@@ -54,13 +67,14 @@ async def search_places(
 
     cache_key = make_cache_key(lat, lng, type, radius)
 
-    # Check cache
-    cached = await db.places_cache.find_one(
-        {"cache_key": cache_key, "expires_at": {"$gt": datetime.now(timezone.utc)}},
-        {"_id": 0}
-    )
-    if cached:
-        return {"places": cached["places"], "total": len(cached["places"]), "type": type, "cached": True}
+    # Check cache (skip if refresh requested)
+    if not refresh:
+        cached = await db.places_cache.find_one(
+            {"cache_key": cache_key, "expires_at": {"$gt": datetime.now(timezone.utc)}},
+            {"_id": 0}
+        )
+        if cached:
+            return {"places": cached["places"], "total": len(cached["places"]), "type": type, "cached": True}
 
     type_tags = PLACE_TYPES[type]
     node_queries = ""
@@ -69,15 +83,15 @@ async def search_places(
         node_queries += f"way{tag}(around:{radius},{lat},{lng});\n"
 
     query = f"""
-    [out:json][timeout:25];
+    [out:json][timeout:30];
     (
       {node_queries}
     );
-    out center 50;
+    out center 500;
     """
 
     try:
-        async with httpx.AsyncClient(timeout=25) as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(OVERPASS_URL, data={"data": query})
             resp.raise_for_status()
             data = resp.json()

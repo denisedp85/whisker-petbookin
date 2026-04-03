@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { MapPin, Search, Stethoscope, Store, Trees, Scissors, Hotel, PawPrint, Phone, Globe, Clock } from 'lucide-react';
+import { MapPin, Search, Stethoscope, Store, Trees, Scissors, Hotel, PawPrint, Phone, Globe, Clock, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -14,6 +14,7 @@ const PLACE_TYPES = [
   { value: 'dog_park', label: 'Dog Parks', icon: Trees, color: 'bg-green-100 text-green-600' },
   { value: 'groomer', label: 'Groomers', icon: Scissors, color: 'bg-purple-100 text-purple-600' },
   { value: 'park', label: 'Parks', icon: Trees, color: 'bg-emerald-100 text-emerald-600' },
+  { value: 'pet_friendly', label: 'Pet-Friendly', icon: PawPrint, color: 'bg-orange-100 text-orange-600' },
 ];
 
 export default function MapPage() {
@@ -100,12 +101,15 @@ export default function MapPage() {
     setLoading(false);
   };
 
-  const searchPlaces = async (lat, lng, type) => {
+  const searchPlaces = async (lat, lng, type, forceRefresh = false) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/places/search?lat=${lat}&lng=${lng}&type=${type}&radius=25000`, { headers: authHeaders() });
+      const res = await axios.get(`${API}/places/search?lat=${lat}&lng=${lng}&type=${type}&radius=25000${forceRefresh ? '&refresh=true' : ''}`, { headers: authHeaders() });
       setPlaces(res.data.places || []);
       updateMapMarkers(res.data.places || [], type);
+      if (res.data.cached) {
+        toast.info(`Showing cached results. Tap Refresh for latest data.`);
+      }
       if (res.data.places?.length === 0) {
         toast.info('No places found nearby. Try a larger area or different type.');
       }
@@ -127,7 +131,7 @@ export default function MapPage() {
     const typeInfo = PLACE_TYPES.find(t => t.value === type);
     const colorMap = {
       vet: '#EF4444', pet_store: '#3B82F6', dog_park: '#22C55E',
-      groomer: '#A855F7', park: '#10B981',
+      groomer: '#A855F7', park: '#10B981', pet_friendly: '#F97316',
     };
     const color = colorMap[type] || '#FF7A6A';
 
@@ -208,10 +212,24 @@ export default function MapPage() {
         </div>
 
         {locationName && (
-          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5" /> Showing results near <span className="font-medium text-foreground">{locationName}</span>
-            {places.length > 0 && <Badge variant="outline" className="ml-2 text-[10px]">{places.length} found</Badge>}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" /> Showing results near <span className="font-medium text-foreground">{locationName}</span>
+              {places.length > 0 && <Badge variant="outline" className="ml-2 text-[10px]">{places.length} found</Badge>}
+            </p>
+            {coords && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => searchPlaces(coords.lat, coords.lng, selectedType, true)}
+                disabled={loading}
+                className="rounded-full text-xs gap-1.5"
+                data-testid="map-refresh-btn"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+              </Button>
+            )}
+          </div>
         )}
 
         {/* Map and results */}

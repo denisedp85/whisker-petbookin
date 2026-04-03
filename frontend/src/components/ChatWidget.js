@@ -363,6 +363,9 @@ export default function ChatWidget() {
   const dragRef = useRef(null);
   const isDragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const didDrag = useRef(false);
+  const mouseMoveRef = useRef(null);
+  const mouseUpRef = useRef(null);
 
   const fetchConversations = useCallback(async () => {
     if (!user) return;
@@ -486,27 +489,31 @@ export default function ChatWidget() {
     });
   };
 
-  // Drag handlers
-  const handleMouseDown = (e) => {
-    if (e.target.closest('input, button, textarea')) return;
+  // Drag handlers — use refs for stable listener references
+  useEffect(() => {
+    mouseMoveRef.current = (e) => {
+      if (!isDragging.current) return;
+      didDrag.current = true;
+      const x = Math.max(0, Math.min(e.clientX - dragOffset.current.x, window.innerWidth - 300));
+      const y = Math.max(0, Math.min(e.clientY - dragOffset.current.y, window.innerHeight - 50));
+      setPosition({ x, y });
+    };
+    mouseUpRef.current = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', mouseMoveRef.current);
+      document.removeEventListener('mouseup', mouseUpRef.current);
+    };
+  }, []);
+
+  const handleDragStart = (e) => {
+    if (e.target.closest('input, textarea')) return;
+    e.preventDefault();
     isDragging.current = true;
+    didDrag.current = false;
     const rect = dragRef.current.getBoundingClientRect();
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging.current) return;
-    const x = Math.max(0, Math.min(e.clientX - dragOffset.current.x, window.innerWidth - 300));
-    const y = Math.max(0, Math.min(e.clientY - dragOffset.current.y, window.innerHeight - 50));
-    setPosition({ x, y });
-  };
-
-  const handleMouseUp = () => {
-    isDragging.current = false;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', mouseMoveRef.current);
+    document.addEventListener('mouseup', mouseUpRef.current);
   };
 
   if (!user) return null;
@@ -548,15 +555,15 @@ export default function ChatWidget() {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onClose={() => setIsOpen(false)}
-          onDragStart={handleMouseDown}
+          onDragStart={handleDragStart}
         />
       )}
 
       {/* Chat toggle button */}
       {!isOpen && (
         <button
-          onClick={() => { setIsOpen(true); fetchContacts(); fetchConversations(); }}
-          onMouseDown={handleMouseDown}
+          onClick={() => { if (!didDrag.current) { setIsOpen(true); fetchContacts(); fetchConversations(); } }}
+          onMouseDown={handleDragStart}
           className="relative mb-0 h-10 bg-[#28211E] text-white rounded-t-lg px-4 flex items-center gap-2 hover:bg-[#3a332e] transition-colors shadow-lg cursor-grab active:cursor-grabbing"
           data-testid="chat-toggle-btn"
         >

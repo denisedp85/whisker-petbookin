@@ -240,6 +240,15 @@ async def seed_admin():
     except Exception as e:
         logger.warning(f"Storage init deferred: {e}")
 
+    # Clear stale places cache on startup for fresh map data
+    try:
+        from datetime import datetime, timezone
+        result = await db.places_cache.delete_many({"expires_at": {"$lt": datetime.now(timezone.utc)}})
+        if result.deleted_count:
+            logger.info(f"Cleared {result.deleted_count} stale places cache entries")
+    except Exception as e:
+        logger.warning(f"Places cache cleanup: {e}")
+
     from utils.auth import hash_password, generate_user_id
     from datetime import datetime, timezone
 
