@@ -72,6 +72,15 @@ Build "Petbookin" - A social network for pets with breeder registry, tiered subs
 - [x] React: Fixed empty catch blocks in 6 pages (added console.error logging)
 - [x] React: Replaced index-as-key with stable keys in 7 files (VIPDirectory, Tournaments, SignUp, Live, Games, PetbookinSeal)
 - [x] Note: React hooks deps reviewed - existing deps are correct (useState setters are stable refs)
+
+### Phase 19 - Games Expansion, Lives & Coin System (Apr 3, 2026)
+- [x] 3 new games: Paw Match (match-3, 7x7 grid, 60s timer), Pet Memory (12-card flip), Breed Scramble (5-word rounds)
+- [x] Lives system: 5 max lives, regenerate 1 every 30 min, each game costs 1 life
+- [x] Coin system: earn from games, spend on extra lives (20 coins each)
+- [x] Coin Shop: 3 Stripe packages ($0.99/100, $3.99/500, $9.99/1500 coins)
+- [x] Weekly Awards tab: auto-aggregated leaderboard with champion recognition
+- [x] All game submissions award points that track in user.points
+- [x] Coin purchases handled via Stripe webhook (type=coin_purchase)
 - [x] Theme presets now apply globally: AppLayout applies bg_color/video_bg_url, FeedPage applies card_bg/text_color/accent to cards
 - [x] Background presets auto-save on click (no more needing Save button)
 - [x] File upload buttons for backgrounds AND music (uses Emergent Object Storage)
