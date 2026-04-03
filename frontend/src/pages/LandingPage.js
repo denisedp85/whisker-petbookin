@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { PawPrint, ArrowRight, Shield, Star, Gamepad2, Store } from 'lucide-react';
+import { PawPrint, ArrowRight, Shield, Star, Gamepad2, Store, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ export default function LandingPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [form, setForm] = useState({ email: '', password: '', name: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, register, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
@@ -182,15 +183,25 @@ export default function LandingPage() {
                 data-testid="auth-email-input"
                 className="rounded-xl"
               />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={(e) => setForm({...form, password: e.target.value})}
-                required
-                data-testid="auth-password-input"
-                className="rounded-xl"
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={(e) => setForm({...form, password: e.target.value})}
+                  required
+                  data-testid="auth-password-input"
+                  className="rounded-xl pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="toggle-password-visibility"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               <Button
                 type="submit"
                 className="w-full rounded-full bg-primary text-white hover:bg-primary/90"

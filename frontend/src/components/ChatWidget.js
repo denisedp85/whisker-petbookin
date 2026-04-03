@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { MessageCircle, X, Send, Search, ChevronDown, Minus, Users, Plus, GripVertical } from 'lucide-react';
+import { MessageCircle, X, Send, Search, ChevronDown, Minus, Users, Plus, GripVertical, Lock, Unlock, Minimize2, Maximize2, Settings } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 
 function timeAgo(dateStr) {
@@ -360,6 +360,9 @@ export default function ChatWidget() {
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [groups, setGroups] = useState([]);
   const [position, setPosition] = useState({ x: null, y: null });
+  const [chatMode, setChatMode] = useState(() => localStorage.getItem('petbookin_chat_mode') || 'bar'); // bar, bubble
+  const [isLocked, setIsLocked] = useState(() => localStorage.getItem('petbookin_chat_locked') === 'true');
+  const [showChatSettings, setShowChatSettings] = useState(false);
   const dragRef = useRef(null);
   const isDragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -506,6 +509,7 @@ export default function ChatWidget() {
   }, []);
 
   const handleDragStart = (e) => {
+    if (isLocked) return;
     if (e.target.closest('input, textarea')) return;
     e.preventDefault();
     isDragging.current = true;
@@ -514,6 +518,27 @@ export default function ChatWidget() {
     dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     document.addEventListener('mousemove', mouseMoveRef.current);
     document.addEventListener('mouseup', mouseUpRef.current);
+  };
+
+  const toggleChatMode = (mode) => {
+    setChatMode(mode);
+    localStorage.setItem('petbookin_chat_mode', mode);
+    setShowChatSettings(false);
+  };
+
+  const toggleLock = () => {
+    const next = !isLocked;
+    setIsLocked(next);
+    localStorage.setItem('petbookin_chat_locked', next.toString());
+    if (next) { setPosition({ x: null, y: null }); }
+  };
+
+  const snapToPosition = (pos) => {
+    if (pos === 'bottom-right') setPosition({ x: null, y: null });
+    else if (pos === 'bottom-left') setPosition({ x: 16, y: window.innerHeight - 50 });
+    else if (pos === 'top-right') setPosition({ x: window.innerWidth - 320, y: 80 });
+    else if (pos === 'top-left') setPosition({ x: 16, y: 80 });
+    setShowChatSettings(false);
   };
 
   if (!user) return null;
@@ -561,20 +586,77 @@ export default function ChatWidget() {
 
       {/* Chat toggle button */}
       {!isOpen && (
-        <button
-          onClick={() => { if (!didDrag.current) { setIsOpen(true); fetchContacts(); fetchConversations(); } }}
-          onMouseDown={handleDragStart}
-          className="relative mb-0 h-10 bg-[#28211E] text-white rounded-t-lg px-4 flex items-center gap-2 hover:bg-[#3a332e] transition-colors shadow-lg cursor-grab active:cursor-grabbing"
-          data-testid="chat-toggle-btn"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span className="text-xs font-semibold">Chat</span>
-          {unreadTotal > 0 && (
-            <span className="absolute -top-2 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center animate-bounce">
-              {unreadTotal > 9 ? '9+' : unreadTotal}
-            </span>
+        <div className="relative">
+          {/* Chat settings dropdown */}
+          {showChatSettings && (
+            <div className="absolute bottom-full right-0 mb-1 w-48 bg-card rounded-xl border border-border shadow-xl p-2 z-50 animate-fade-in-up" data-testid="chat-settings-dropdown">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1">Display</p>
+              <button onClick={() => toggleChatMode('bar')} className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center gap-2 ${chatMode === 'bar' ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`} data-testid="chat-mode-bar">
+                <Maximize2 className="w-3.5 h-3.5" /> Tab Bar
+              </button>
+              <button onClick={() => toggleChatMode('bubble')} className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center gap-2 ${chatMode === 'bubble' ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`} data-testid="chat-mode-bubble">
+                <Minimize2 className="w-3.5 h-3.5" /> Floating Bubble
+              </button>
+              <div className="border-t border-border my-1" />
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1">Position</p>
+              <button onClick={toggleLock} className="w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center gap-2 hover:bg-muted" data-testid="chat-toggle-lock">
+                {isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                {isLocked ? 'Unlock Position' : 'Lock Position'}
+              </button>
+              <button onClick={() => snapToPosition('bottom-right')} className="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-muted" data-testid="chat-snap-br">Bottom Right</button>
+              <button onClick={() => snapToPosition('bottom-left')} className="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-muted" data-testid="chat-snap-bl">Bottom Left</button>
+              <button onClick={() => snapToPosition('top-right')} className="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-muted" data-testid="chat-snap-tr">Top Right</button>
+              <button onClick={() => snapToPosition('top-left')} className="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-muted" data-testid="chat-snap-tl">Top Left</button>
+            </div>
           )}
-        </button>
+
+          {chatMode === 'bubble' ? (
+            <button
+              onClick={() => { if (!didDrag.current) { setIsOpen(true); fetchContacts(); fetchConversations(); } }}
+              onMouseDown={handleDragStart}
+              className="relative w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
+              data-testid="chat-toggle-btn"
+            >
+              <MessageCircle className="w-5 h-5" />
+              {unreadTotal > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-bounce">
+                  {unreadTotal > 9 ? '9+' : unreadTotal}
+                </span>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowChatSettings(!showChatSettings); }}
+                className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-card border border-border flex items-center justify-center shadow-sm hover:bg-muted"
+                data-testid="chat-settings-btn"
+              >
+                <Settings className="w-2.5 h-2.5 text-muted-foreground" />
+              </button>
+            </button>
+          ) : (
+            <div className="flex items-center">
+              <button
+                onClick={() => { if (!didDrag.current) { setIsOpen(true); fetchContacts(); fetchConversations(); } }}
+                onMouseDown={handleDragStart}
+                className={`relative mb-0 h-10 bg-[#28211E] text-white rounded-t-lg px-4 flex items-center gap-2 hover:bg-[#3a332e] transition-colors shadow-lg ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
+                data-testid="chat-toggle-btn"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span className="text-xs font-semibold">Chat</span>
+                {unreadTotal > 0 && (
+                  <span className="absolute -top-2 -right-1 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center animate-bounce">
+                    {unreadTotal > 9 ? '9+' : unreadTotal}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowChatSettings(!showChatSettings); }}
+                className="h-10 bg-[#28211E] text-white/60 hover:text-white rounded-t-lg px-2 border-l border-white/10 transition-colors"
+                data-testid="chat-settings-btn"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

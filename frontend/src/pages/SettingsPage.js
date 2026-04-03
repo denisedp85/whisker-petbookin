@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles, Lock, Crown, LogOut, X } from 'lucide-react';
+import { Settings, User, Palette, CreditCard, Receipt, ExternalLink, Music, Image, Sparkles, Lock, Crown, LogOut, X, Eye, EyeOff, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker from '../components/EmojiPicker';
 import axios from 'axios';
@@ -60,6 +60,27 @@ export default function SettingsPage() {
       refreshUser();
     } catch {
       toast.error('Theme update failed');
+    }
+  };
+
+  const handleFileUpload = async (e, field) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      toast.info('Uploading...');
+      const res = await axios.post(`${API}/uploads/file`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' }
+      });
+      const url = res.data.url;
+      const updated = { ...theme, [field]: url };
+      setTheme(updated);
+      await axios.put(`${API}/auth/theme`, updated, { headers: authHeaders() });
+      refreshUser();
+      toast.success('Uploaded and saved!');
+    } catch {
+      toast.error('Upload failed');
     }
   };
 
@@ -259,7 +280,7 @@ export default function SettingsPage() {
                     ].map((bg, i) => (
                       <button
                         key={i}
-                        onClick={() => setTheme({ ...theme, video_bg_url: bg.url })}
+                        onClick={() => handleThemeUpdate({ ...theme, video_bg_url: bg.url })}
                         className={`h-16 rounded-xl overflow-hidden border-2 transition-all ${
                           (theme.video_bg_url || '') === bg.url ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
                         }`}
@@ -275,13 +296,20 @@ export default function SettingsPage() {
                       </button>
                     ))}
                   </div>
-                  <Input
-                    placeholder="Or paste a custom image URL..."
-                    value={theme.video_bg_url || ''}
-                    onChange={(e) => setTheme({ ...theme, video_bg_url: e.target.value })}
-                    className="rounded-xl text-xs"
-                    data-testid="bg-image-url-input"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Or paste a custom image URL..."
+                      value={theme.video_bg_url || ''}
+                      onChange={(e) => setTheme({ ...theme, video_bg_url: e.target.value })}
+                      onBlur={() => { if (theme.video_bg_url) handleThemeUpdate(theme); }}
+                      className="rounded-xl text-xs flex-1"
+                      data-testid="bg-image-url-input"
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-muted hover:bg-muted/80 cursor-pointer text-xs font-medium transition-colors" data-testid="bg-upload-label">
+                      <Upload className="w-3.5 h-3.5" /> Upload
+                      <input type="file" accept="image/*,video/*" className="hidden" onChange={(e) => handleFileUpload(e, 'video_bg_url')} data-testid="bg-upload-input" />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Profile Music */}
@@ -290,13 +318,20 @@ export default function SettingsPage() {
                     <Music className="w-3.5 h-3.5" /> Profile Music
                   </label>
                   <p className="text-[10px] text-muted-foreground mb-2">Visitors will hear this when they view your pet's profile</p>
-                  <Input
-                    placeholder="Paste a music/audio URL (.mp3, .wav, etc.)"
-                    value={theme.music_url || ''}
-                    onChange={(e) => setTheme({ ...theme, music_url: e.target.value })}
-                    className="rounded-xl text-xs"
-                    data-testid="music-url-input"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Paste a music/audio URL (.mp3, .wav, etc.)"
+                      value={theme.music_url || ''}
+                      onChange={(e) => setTheme({ ...theme, music_url: e.target.value })}
+                      onBlur={() => { if (theme.music_url) handleThemeUpdate(theme); }}
+                      className="rounded-xl text-xs flex-1"
+                      data-testid="music-url-input"
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-muted hover:bg-muted/80 cursor-pointer text-xs font-medium transition-colors" data-testid="music-upload-label">
+                      <Upload className="w-3.5 h-3.5" /> Upload
+                      <input type="file" accept="audio/*,.mp3,.wav,.ogg,.flac" className="hidden" onChange={(e) => handleFileUpload(e, 'music_url')} data-testid="music-upload-input" />
+                    </label>
+                  </div>
                   {theme.music_url && (
                     <div className="mt-2 p-2 rounded-lg bg-muted/50 flex items-center gap-2">
                       <Music className="w-4 h-4 text-primary flex-shrink-0" />

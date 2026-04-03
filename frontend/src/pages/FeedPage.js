@@ -11,6 +11,19 @@ import axios from 'axios';
 
 const TIER_ORDER = ['free', 'prime', 'pro', 'ultra', 'mega'];
 
+function getThemeStyles(user) {
+  const t = user?.profile_theme || {};
+  return {
+    card: {
+      backgroundColor: t.card_bg || undefined,
+      color: t.text_color || undefined,
+      borderColor: t.accent_color ? `${t.accent_color}30` : undefined,
+    },
+    accent: t.accent_color || undefined,
+    text: t.text_color || undefined,
+  };
+}
+
 function canCreateType(tier, type) {
   const t = tier || 'free';
   if (type === 'video') return ['ultra', 'mega'].includes(t);
@@ -239,7 +252,7 @@ export default function FeedPage() {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6" data-testid="feed-page">
-        <h1 className="text-2xl font-bold" style={{ fontFamily: 'Outfit' }}>Feed</h1>
+        <h1 className="text-2xl font-bold" style={{ fontFamily: 'Outfit', color: getThemeStyles(user).text }}>Feed</h1>
 
         {/* Pet of the Week */}
         {petOfWeek && petOfWeek.pet && (
@@ -303,7 +316,7 @@ export default function FeedPage() {
         )}
 
         {/* Create Post */}
-        <div className="rounded-2xl border border-border bg-card p-6" data-testid="create-post">
+        <div className="rounded-2xl border border-border bg-card p-6" style={getThemeStyles(user).card} data-testid="create-post">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 overflow-hidden">
               {user?.picture ? <img src={user.picture} alt="" className="w-full h-full object-cover" /> : user?.name?.charAt(0)}
@@ -411,7 +424,7 @@ export default function FeedPage() {
           </div>
         ) : (
           posts.map((post) => (
-            <div key={post.post_id} className="rounded-2xl border border-border bg-card p-6 animate-fade-in-up" data-testid={`post-${post.post_id}`}>
+            <div key={post.post_id} className="rounded-2xl border border-border bg-card p-6 animate-fade-in-up" style={getThemeStyles(user).card} data-testid={`post-${post.post_id}`}>
               {/* Post header */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden">
