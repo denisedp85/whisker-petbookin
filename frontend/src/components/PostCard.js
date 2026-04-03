@@ -86,7 +86,7 @@ export default function PostCard({ post, onDelete, onLikeToggle }) {
             </p>
           </div>
         </div>
-        {post.owner_id === user?.user_id && (
+        {(post.author_id === user?.user_id || user?.is_admin || user?.role === 'owner') && (
           <Button
             data-testid={`delete-post-${post.post_id}`}
             variant="ghost"
@@ -159,7 +159,7 @@ export default function PostCard({ post, onDelete, onLikeToggle }) {
         >
           <MessageCircle className="w-4 h-4" /> Comment
         </Button>
-        {post.owner_id !== user?.user_id && (
+        {post.author_id !== user?.user_id && (
           <Button
             data-testid={`report-btn-${post.post_id}`}
             variant="ghost"

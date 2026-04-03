@@ -4,7 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
-import { Shield, Users, PawPrint, FileText, Award, Trash2, Crown, UserCog, Plus, Palette } from 'lucide-react';
+import { Shield, Users, PawPrint, FileText, Award, Trash2, Crown, UserCog, Plus, Palette, Database, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -121,6 +121,7 @@ export default function AdminPage() {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'roles', label: 'Roles & Tiers', icon: UserCog },
     { id: 'custom-roles', label: 'Custom Roles', icon: Palette },
+    { id: 'data', label: 'Data Management', icon: Database },
   ];
 
   return (
@@ -403,6 +404,62 @@ export default function AdminPage() {
                       })}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Data Management Tab */}
+            {activeTab === 'data' && (
+              <div className="space-y-6" data-testid="admin-data-management">
+                <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2" style={{ fontFamily: 'Outfit' }}>
+                    <Trash2 className="w-4 h-4" /> Clean Up Test Data
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Remove test users and their associated posts, pets, and data.</p>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (!window.confirm('This will delete all test user accounts and their posts. Continue?')) return;
+                      try {
+                        const res = await axios.post(`${API}/admin/cleanup-test-data`, {}, { headers: authHeaders() });
+                        toast.success(`Cleaned: ${res.data.posts_deleted} posts, ${res.data.pets_deleted} pets, ${res.data.test_users_deleted} users removed`);
+                        fetchData();
+                      } catch (e) {
+                        toast.error('Cleanup failed');
+                      }
+                    }}
+                    className="rounded-full"
+                    data-testid="cleanup-test-data-btn"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Clean Up Test Accounts
+                  </Button>
+                </div>
+
+                <div className="rounded-2xl border-2 border-destructive/30 bg-destructive/5 p-6 space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2 text-destructive" style={{ fontFamily: 'Outfit' }}>
+                    <AlertTriangle className="w-4 h-4" /> Delete ALL Posts
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Permanently removes every post and comment from the platform. This cannot be undone.</p>
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (!window.confirm('WARNING: This will delete ALL posts and comments on the entire platform. Are you absolutely sure?')) return;
+                      if (!window.confirm('FINAL WARNING: This action is irreversible. Type-check: Delete all posts?')) return;
+                      try {
+                        const res = await axios.post(`${API}/admin/cleanup-test-data`, { delete_all_posts: true }, {
+                          headers: { ...authHeaders(), 'Content-Type': 'application/json' }
+                        });
+                        toast.success(`Deleted ${res.data.posts_deleted} posts and ${res.data.comments_deleted} comments`);
+                        fetchData();
+                      } catch (e) {
+                        toast.error('Delete failed');
+                      }
+                    }}
+                    className="rounded-full"
+                    data-testid="delete-all-posts-btn"
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" /> Delete ALL Posts & Comments
+                  </Button>
                 </div>
               </div>
             )}
